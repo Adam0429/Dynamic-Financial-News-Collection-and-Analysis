@@ -9,20 +9,6 @@ import numpy as np
  
 # nltk.download()
 
-def del_tag(strings):
-    dr = re.compile(r'<[^>]+>', re.S)
-    if type(strings) == type([]):
-        strs = []
-        for string in strings:
-            string = str(string)
-            s = dr.sub('', string)
-            strs.append(s)
-        return strs
-    else:
-        strings = str(strings)
-        s = dr.sub('', strings)
-        return s
-
 def review_to_words(review_text):
     # Function to convert a raw review to a string of words
     # The input is a single string (a raw movie review), and 

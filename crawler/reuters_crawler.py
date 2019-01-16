@@ -10,6 +10,32 @@ import re
 from tqdm import tqdm
 
 
+def del_tag(strings):
+    dr = re.compile(r'<[^>]+>', re.S)
+    if type(strings) == type([]):
+        strs = []
+        for string in strings:
+            string = str(string)
+            s = dr.sub('', string)
+            strs.append(s)
+        return strs
+    else:
+        strings = str(strings)
+        s = dr.sub('', strings)
+        return s
+
+def get(url,headers={},params=()):
+    stutas = 1
+    while stutas != 200:
+        try:
+            r = requests.get(url,headers=headers,params=params)
+            stutas = r.status_code
+        except KeyboardInterrupt:
+            exit()
+        except:
+            print('retry')
+    print(url+' 请求成功')
+    return r
 socks.set_default_proxy(socks.SOCKS5,"127.0.0.1",1080)
 socket.socket = socks.socksocket
 s = requests.session()
@@ -28,26 +54,13 @@ now = int(str(int(time.time()))+'000')
 # one_day = 86400
 # yesterday = int(time.mktime(datetime.date.today().timetuple())) - one_day # 昨天0点
 # yesterday = int(str(yesterday)+'000')
+# 'http://www.reuters.com/article/json/data-idUSL3N1ZB0RL'
+
 params = (
     ('limit',100),
-    ('channel',113)
+    ('channel',113) # US market news 
     # ('endTime',now)
 )
-# 'http://www.reuters.com/article/json/data-idUSL3N1ZB0RL'
-def get(url,headers={},params=()):
-    stutas = 1
-    while stutas != 200:
-        try:
-            r = requests.get(url,headers=headers,params=params)
-            stutas = r.status_code
-        except KeyboardInterrupt:
-            exit()
-        except:
-            print('retry')
-    print(url+' 请求成功')
-    return r
-
-# r = get('http://www.reuters.com/article/json/data-idUSL3N1ZB0RL',headers=headers)
 
 
 r = get('https://mobile.reuters.com/assets/jsonHeadlines', headers=headers, params=params)
@@ -74,14 +87,13 @@ for idx in tqdm(range(0,len(datas))):
     worksheet.write(idx+1,3,datas[idx]['dateMillis'])
     r = get(url, headers=headers)
     data = r.json()['story']
-    content = data['body']
     # published = dateutil.parser.parse(str(datetime.datetime.fromtimestamp(news_json['published']).date()))
-    worksheet.write(idx+1,4,content)
+    worksheet.write(idx+1,4,del_tag(data['body']))
     worksheet.write(idx+1,0,data['headline'])
     # worksheet.write(idx+1,5,published)
 
 
-workbook.save('data.xls')
+workbook.save('data2.xls')
 
 # for data in tqdm(datas):
 #     url = host + data['url']
