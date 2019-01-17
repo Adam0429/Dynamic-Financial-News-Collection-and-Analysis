@@ -1,7 +1,12 @@
-import quandl
+import datetime
+import pandas as pd
+import pandas_datareader.data as web
 
-quandl.ApiConfig.api_key = 'J2KokzoYT_8FqwQzbx9_'
-df = quandl.get("WIKI/GOOGL",rows=5)
-# df = df[['Adj. Open', 'Adj. High', 'Adj. Low', 'Adj. Close', 'Adj. Volume']]
-print(df)
-# print(df)
+def rise_or_fall(stockname):
+	today = datetime.date.today()
+	yesterday = today - datetime.timedelta(days=1)
+	prices = web.DataReader('LNT', 'yahoo', yesterday,today)
+	if prices['Close'][1]-prices['Close'][0] > 0:
+		return 1
+	else:
+		return 0

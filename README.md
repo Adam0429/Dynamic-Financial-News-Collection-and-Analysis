@@ -1,5 +1,5 @@
-# Financial-Portfolio-Management-using-Reinforcement-Learning
-Final grade project
+# Dynamic-Financial-News-Collection-and-Analysis
+Final project
 ## 爬虫数据来源
 Reuters 
 
