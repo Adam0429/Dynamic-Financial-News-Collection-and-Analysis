@@ -62,7 +62,6 @@ params = (
     # ('endTime',now)
 )
 
-
 r = get('https://mobile.reuters.com/assets/jsonHeadlines', headers=headers, params=params)
 stutas = r.status_code
 # except:
@@ -87,10 +86,13 @@ for idx in tqdm(range(0,len(datas))):
     worksheet.write(idx+1,3,datas[idx]['dateMillis'])
     r = get(url, headers=headers)
     data = r.json()['story']
-    # published = dateutil.parser.parse(str(datetime.datetime.fromtimestamp(news_json['published']).date()))
+    published = data['published']
+    dateArray = datetime.datetime.utcfromtimestamp(published)
+    date = dateArray.strftime("%Y-%m-%d")
+    worksheet.write(idx+1,5,date)
     worksheet.write(idx+1,4,del_tag(data['body']))
     worksheet.write(idx+1,0,data['headline'])
-    # worksheet.write(idx+1,5,published)
+    
 
 
 workbook.save('data2.xls')

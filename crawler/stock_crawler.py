@@ -10,3 +10,4 @@ def rise_or_fall(stockname):
 		return 1
 	else:
 		return 0
+

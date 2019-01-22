@@ -1,0 +1,1 @@
+https://www.bloomberg.com/search?query=stock&endTime=2018-02-25T00:03:02.999Z&page=
