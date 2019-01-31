@@ -6,7 +6,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import GaussianNB
 import xlrd,xlwt
 import numpy as np
- 
+import spacy
+from gensim.models import Word2Vec
+
 # nltk.download()
 
 def review_to_words(review_text):
@@ -34,21 +36,49 @@ def review_to_words(review_text):
     # and return the result.
     return(' '.join(meaningful_words))
 
-workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Financial-Portfolio-Management-using-Reinforcement-Learning/data.xls')
-sheet = workbook.sheet_by_index(0)
-rows = sheet.col_values(0)[1:]
-for row in rows:
-	rows[rows.index(row)] = review_to_words(row)
-vectorizer = CountVectorizer(analyzer = "word",   
-                             tokenizer = None,    
-                             preprocessor = None, 
-                             stop_words = None,  
-                             max_features = 10) 
 
-train_data_features = vectorizer.fit_transform(rows)
-train_data_features = train_data_features.toarray()
-vocab = vectorizer.get_feature_names()
-gnb = GaussianNB()
-gnb.fit(train_data_features, [1]*100)
-r = gnb.predict([np.ones(10)])
-print(r)
+
+workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data2.xls')
+sheet = workbook.sheet_by_index(0)
+contents = sheet.col_values(4)[1:]
+nlp = spacy.load('en')
+sents = []
+for content in contents:
+	doc = nlp(content)
+	sentences = list(doc.sents)   # 分解为句子
+	for sentence in sentences:
+		sentence = str(sentence)
+		sents.append(sentence)
+model = Word2Vec(sentences = sents,min_count = 2)
+import IPython
+IPython.embed()
+bag_of_keywords = set(['rise','drop','fall','gain','surge','shrink','jump','slump','surge'])
+stop = False
+bok_size = 1000
+for i in range(10):
+    new_words = []
+    if stop:break
+    for k in bag_of_keywords:
+        if k in model.wv.vocab.keys():# wv = wordvector
+            new_words.extend(model.most_similar(k))
+    for n in new_words:
+        if n[0].islower() and len(n[0])>3 and n[0].isalpha():
+            bag_of_keywords.add(n[0])
+            if len(bag_of_keywords) == bok_size:
+                stop = True
+                break
+# for row in rows:
+# 	rows[rows.index(row)] = review_to_words(row)
+# vectorizer = CountVectorizer(analyzer = "word",   
+#                              tokenizer = None,    
+#                              preprocessor = None, 
+#                              stop_words = None,  
+#                              max_features = 10) 
+
+# train_data_features = vectorizer.fit_transform(rows)
+# train_data_features = train_data_features.toarray()
+# vocab = vectorizer.get_feature_names()
+# gnb = GaussianNB()
+# gnb.fit(train_data_features, [1]*100)
+# r = gnb.predict([np.ones(10)])
+# print(r)

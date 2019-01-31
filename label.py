@@ -23,7 +23,6 @@ def rise_or_fall(stockname,start_time):
 		et = st - datetime.timedelta(days=-1)
 	end_time = et.strftime("%Y-%m-%d")
 	start_time = st.strftime("%Y-%m-%d")
-	print(end_time,start_time)
 	try:
 		prices = web.DataReader(stockname, 'yahoo', start_time,end_time)
 		
@@ -32,6 +31,8 @@ def rise_or_fall(stockname,start_time):
 		else:
 			return '0'
 	except:
+		import IPython
+		IPython.embed()
 		return '暂无数据'
 path = r'data/data2.xls'
 
