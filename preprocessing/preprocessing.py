@@ -54,8 +54,6 @@ for content in tqdm(contents):
 		tokens.append(token)
 
 model = Word2Vec(sentences = tokens,min_count = 2)
-import IPython
-IPython.embed()
 bag_of_keywords = set(['rise','drop','fall','gain','surge','shrink','jump','slump','surge'])
 stop = False
 bok_size = 1000
@@ -71,11 +69,15 @@ for n in new_words:
 		if len(bag_of_keywords) == bok_size:
 			stop = True
 			break
+'''fit():计算数据的参数，\mu（均值），\sigma（标准差），并存储在对象中（例如实例化的CountVectorizer()等）。
+transform():将这些参数应用到数据集，进行标准化（尺度化）。'''
 
 bag_of_keywords = np.array(list(bag_of_keywords))
 bok_tfidf = TfidfVectorizer(lowercase = False, min_df = 1, vocabulary=bag_of_keywords)
 X_bok_tfidf = bok_tfidf.fit_transform(sentences)
 X_bok_tfidf = X_bok_tfidf.toarray()
+import IPython
+IPython.embed()
 bok_count = CountVectorizer(lowercase=False,min_df=1,vocabulary=bag_of_keywords)
 X_bok_count = bok_count.fit_transform(sentences)
 X_bok_count = X_bok_count.toarray()
