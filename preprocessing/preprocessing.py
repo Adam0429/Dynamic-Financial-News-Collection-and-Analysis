@@ -94,19 +94,17 @@ len_word = 0
 tokens = []
 sentences = []
 for content in tqdm(contents):
-	doc = content.split('.*?\.(?=\s+(?:|$))')
-	print(doc)
-	input()
-	# sents = list(doc.sents)   # 分解为句子
-	# for sent in sents:
-	# 	sentences.append(str(sents))
-	# 	token=list(map(str,sent))
-	# 	tokens.append(token)
+	doc = nlp(content)
+	sents = list(doc.sents)   # 分解为句子
+	for sent in sents:
+		sentences.append(str(sents))
+		token = list(map(str,sent))
+		tokens.append(token)
 
 model = Word2Vec(sentences = tokens,min_count = 2)
 bag_of_keywords = set(['rise','drop','fall','gain','surge','shrink','jump','slump','surge'])
 stop = False
-bok_size = 1000
+bok_size = 100
 for i in range(10):
 	new_words = []
 	if stop:break
@@ -122,6 +120,7 @@ for n in new_words:
 '''fit():计算数据的参数，\mu（均值），\sigma（标准差），并存储在对象中（例如实例化的CountVectorizer()等）。
 transform():将这些参数应用到数据集，进行标准化（尺度化）。'''
 
+## Bag of keywords
 bag_of_keywords = np.array(list(bag_of_keywords))
 bok_tfidf = TfidfVectorizer(lowercase = False, min_df = 1, vocabulary=bag_of_keywords)
 X_bok_tfidf = bok_tfidf.fit_transform(sentences)
@@ -130,8 +129,36 @@ bok_count = CountVectorizer(lowercase=False,min_df=1,vocabulary=bag_of_keywords)
 X_bok_count = bok_count.fit_transform(sentences)
 X_bok_count = X_bok_count.toarray()
 
-print(PS('rise',contents,labels))
+# print(PS('rise',contents,labels))
+## Category tag
+category_tags = set(['published','presented','unveil','investment','bankrupt','acquisition','government'
+                     'sue','lawsuit','highlights'])
+stop = False
+cate_size = 100
 
+for _ in range(10):
+    new_words = []
+    if stop:break
+    for k in category_tags:
+        if k in model.wv.vocab.keys():
+            new_words.extend(model.most_similar(k))
+    for n in new_words:
+        if n[0].islower() and len(n[0])>3 and n[0].isalpha():
+            category_tags.add(n[0])
+            if len(category_tags) == cate_size:
+                stop = True
+                break
+
+
+category_tags = np.array(list(category_tags))
+
+ct_count = CountVectorizer(lowercase = False, min_df = 1, vocabulary = category_tags)
+X_ct_count = ct_count.fit_transform(sentences)
+X_ct_count = X_ct_count.toarray()
+
+ct_tfidf = TfidfVectorizer(lowercase = False, min_df = 1, vocabulary = category_tags)
+X_ct_idf = ct_tfidf.fit_transform(sentences)
+X_ct_idf = X_ct_idf.toarray()
 # for row in rows:
 # 	rows[rows.index(row)] = review_to_words(row)
 # vectorizer = CountVectorizer(analyzer = "word",   
