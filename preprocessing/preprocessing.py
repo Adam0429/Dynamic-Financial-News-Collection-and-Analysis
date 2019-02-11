@@ -10,7 +10,10 @@ import numpy as np
 import spacy
 from gensim.models import Word2Vec
 from tqdm import tqdm
-import math
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout
+from keras.utils import to_categorical
+
 # nltk.download()
 
 def review_to_words(review_text):
@@ -88,11 +91,19 @@ def PS(w,contents,labels):
 workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data2_label.xls')
 sheet = workbook.sheet_by_index(0)
 contents = sheet.col_values(1)[1:]
-labels = sheet.col_values(3)[1:]
+labels_ = sheet.col_values(3)[1:]
 nlp = spacy.load('en')
 len_word = 0
 tokens = []
 sentences = []
+labels = []
+for label in labels_:
+	if '暂无数据' in label:
+		labels.append(0)
+	elif '1' in label and '0' not in label:
+		labels.append(1)		
+	else:
+		labels.append(0)
 for content in tqdm(contents):
 	doc = nlp(content)
 	sents = list(doc.sents)   # 分解为句子
@@ -159,6 +170,27 @@ X_ct_count = X_ct_count.toarray()
 ct_tfidf = TfidfVectorizer(lowercase = False, min_df = 1, vocabulary = category_tags)
 X_ct_idf = ct_tfidf.fit_transform(sentences)
 X_ct_idf = X_ct_idf.toarray()
+
+full_tfidf = TfidfVectorizer(lowercase=False, min_df = 1,vocabulary=bag_of_keywords,use_idf=False)
+X_full_tfidf = full_tfidf.fit_transform(sentences)
+X_full_tfidf = X_full_tfidf.toarray()
+import IPython
+IPython.embed()
+x = np.random.random((664,200))
+y = np.random.random((664, 10))
+# y = to_categorical(y,num_classes=2)
+model = Sequential()
+model.add(Dense(units=10, activation = 'relu', input_dim = x.shape[1]))
+# model.add(Dropout(0.5))
+# model.add(Dense(1024, activation = 'relu'))
+# model.add(Dropout(0.5))
+# model.add(Dense(2, activation='softmax'))
+model.compile(loss = 'categorical_crossentropy',
+               optimizer = 'adam',
+               metrics = ['accuracy'])
+#verbose=1:更新日志 verbose=2:每个epoch一个进度行
+model.fit(x,y,epochs=10, batch_size=32)
+
 # for row in rows:
 # 	rows[rows.index(row)] = review_to_words(row)
 # vectorizer = CountVectorizer(analyzer = "word",   
