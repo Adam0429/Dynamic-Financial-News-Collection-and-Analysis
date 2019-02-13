@@ -176,21 +176,32 @@ X_full_tfidf = full_tfidf.fit_transform(sentences)
 X_full_tfidf = X_full_tfidf.toarray()
 import IPython
 IPython.embed()
-x = np.random.random((664,200))
-y = np.random.random((664, 10))
-# y = to_categorical(y,num_classes=2)
+num_classes = 2
+x = X_bok_count
+y = np.array(labels)
+y = to_categorical(y,num_classes=2)
+
+# x = np.random.random((664,200))
+# y = np.random.random((664, 10))
 model = Sequential()
-model.add(Dense(units=10, activation = 'relu', input_dim = x.shape[1]))
-# model.add(Dropout(0.5))
-# model.add(Dense(1024, activation = 'relu'))
-# model.add(Dropout(0.5))
-# model.add(Dense(2, activation='softmax'))
+model.add(Dense(units=num_classes, activation = 'relu', input_dim = x.shape[1]))
+# 输出就是在输出层有几个神经元,每个神经元代表着一个预测结果,label的序列长度为十，须要十个神经元与之对应。label用to_categorical转换
+model.add(Dropout(0.5))
+''' 多层的意义
+单层神经网络只能用于表示线性可分离的函数。也就是说非常简单的问题，例如，分类问题中可以被一行整齐地分隔开的两个类。如果你的问题相对简单，那么单层网络就足够了。
+
+然而，我们有兴趣解决的大多数问题都不是线性可分的。
+
+多层感知器可用于表示凸区域。这意味着，实际上，他们可以学习在一些高维空间中围绕实例绘制形状，以对它们进行分类，从而克服线性可分性的限制。'''
+model.add(Dense(2, activation = 'relu'))
+model.add(Dropout(0.5))
+model.add(Dense(2, activation='softmax'))
 model.compile(loss = 'categorical_crossentropy',
                optimizer = 'adam',
                metrics = ['accuracy'])
 #verbose=1:更新日志 verbose=2:每个epoch一个进度行
-model.fit(x,y,epochs=10, batch_size=32)
-
+model.fit(x[0:660],y,epochs=10, batch_size=32)
+model.predict(np.array([[0]*x.shape[]]))
 # for row in rows:
 # 	rows[rows.index(row)] = review_to_words(row)
 # vectorizer = CountVectorizer(analyzer = "word",   
