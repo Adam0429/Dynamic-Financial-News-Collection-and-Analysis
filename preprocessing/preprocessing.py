@@ -183,6 +183,8 @@ y = to_categorical(y,num_classes=2)
 
 # x = np.random.random((664,200))
 # y = np.random.random((664, 10))
+
+
 model = Sequential()
 model.add(Dense(units=num_classes, activation = 'relu', input_dim = x.shape[1]))
 # 输出就是在输出层有几个神经元,每个神经元代表着一个预测结果,label的序列长度为十，须要十个神经元与之对应。label用to_categorical转换
@@ -201,7 +203,7 @@ model.compile(loss = 'categorical_crossentropy',
                metrics = ['accuracy'])
 #verbose=1:更新日志 verbose=2:每个epoch一个进度行
 model.fit(x[0:660],y,epochs=10, batch_size=32)
-model.predict(np.array([[0]*x.shape[]]))
+# model.predict(np.array([[0]*x.shape[]]))
 # for row in rows:
 # 	rows[rows.index(row)] = review_to_words(row)
 # vectorizer = CountVectorizer(analyzer = "word",   
