@@ -36,6 +36,9 @@ def get(url,headers={},params=()):
             print('retry')
     print(url+' 请求成功')
     return r
+
+
+
 socks.set_default_proxy(socks.SOCKS5,"127.0.0.1",1080)
 socket.socket = socks.socksocket
 s = requests.session()
@@ -62,41 +65,43 @@ params = (
     # ('endTime',now)
 )
 
-r = get('https://mobile.reuters.com/assets/jsonHeadlines', headers=headers, params=params)
-stutas = r.status_code
-# except:
-datas = r.json()['headlines'] # 可以通过筛选时间筛选出前一天的数据
+
+for i in range(5,20):
+    r = get('https://mobile.reuters.com/assets/jsonHeadlines', headers=headers, params=params)
+    stutas = r.status_code
+    # except:
+    datas = r.json()['headlines'] # 可以通过筛选时间筛选出前一天的数据
 
 
-workbook = xlwt.Workbook(encoding = 'utf-8')
-worksheet = workbook.add_sheet('reuters',cell_overwrite_ok=True)
-worksheet.write(0,0,'headline')
-worksheet.write(0,1,'id')
-worksheet.write(0,2,'url')
-worksheet.write(0,3,'dateMillis')
-worksheet.write(0,4,'content')
-worksheet.write(0,5,'published')
+    workbook = xlwt.Workbook(encoding = 'utf-8')
+    worksheet = workbook.add_sheet('reuters',cell_overwrite_ok=True)
+    worksheet.write(0,0,'headline')
+    worksheet.write(0,1,'id')
+    worksheet.write(0,2,'url')
+    worksheet.write(0,3,'dateMillis')
+    worksheet.write(0,4,'content')
+    worksheet.write(0,5,'published')
 
 
-for idx in tqdm(range(0,len(datas))):
-    # worksheet.write(idx+1,0,datas[idx]['headline'])
-    url = article_url+datas[idx]['id']
-    worksheet.write(idx+1,1,datas[idx]['id'])
-    worksheet.write(idx+1,2,url)
-    worksheet.write(idx+1,3,datas[idx]['dateMillis'])
-    r = get(url, headers=headers)
-    data = r.json()['story']
-    published = data['published']
-    dateArray = datetime.datetime.utcfromtimestamp(published)
-    date = dateArray.strftime("%Y-%m-%d")
-    worksheet.write(idx+1,5,date)
-    worksheet.write(idx+1,4,del_tag(data['body']))
-    worksheet.write(idx+1,0,data['headline'])
-    
+    for idx in tqdm(range(0,len(datas))):
+        # worksheet.write(idx+1,0,datas[idx]['headline'])
+        url = article_url+datas[idx]['id']
+        worksheet.write(idx+1,1,datas[idx]['id'])
+        worksheet.write(idx+1,2,url)
+        worksheet.write(idx+1,3,datas[idx]['dateMillis'])
+        r = get(url, headers=headers)
+        data = r.json()['story']
+        published = data['published']
+        dateArray = datetime.datetime.utcfromtimestamp(published)
+        date = dateArray.strftime("%Y-%m-%d")
+        worksheet.write(idx+1,5,date)
+        worksheet.write(idx+1,4,del_tag(data['body']))
+        worksheet.write(idx+1,0,data['headline'])
+        
 
 
-workbook.save('data2.xls')
-
+    workbook.save('data'+str(i)+'.xls')
+    sleep(86400*5)
 # for data in tqdm(datas):
 #     url = host + data['url']
 #     r = requests.get(url, headers=headers,verify=False)

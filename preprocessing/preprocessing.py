@@ -116,22 +116,22 @@ model = Word2Vec(sentences = tokens,min_count = 2)
 bag_of_keywords = set(['rise','drop','fall','gain','surge','shrink','jump','slump','surge'])
 stop = False
 bok_size = 100
-for i in range(10):
-	new_words = []
-	if stop:break
-	for k in bag_of_keywords:
-		if k in model.wv.vocab.keys():# wv = wordvector
-			new_words.extend(model.most_similar(k))
-for n in new_words:
-	if n[0].islower() and len(n[0])>3 and n[0].isalpha():
-		bag_of_keywords.add(n[0])
-		if len(bag_of_keywords) == bok_size:
-			stop = True
-			break
+# for i in range(10):
+# 	new_words = []
+# 	if stop:break
+# 	for k in bag_of_keywords:
+# 		if k in model.wv.vocab.keys():# wv = wordvector
+# 			new_words.extend(model.most_similar(k))
+# for n in new_words:
+# 	if n[0].islower() and len(n[0])>3 and n[0].isalpha():
+# 		bag_of_keywords.add(n[0])
+# 		if len(bag_of_keywords) == bok_size:
+# 			stop = True
+# 			break
 '''fit():计算数据的参数，\mu（均值），\sigma（标准差），并存储在对象中（例如实例化的CountVectorizer()等）。
 transform():将这些参数应用到数据集，进行标准化（尺度化）。'''
 
-## Bag of keywords
+## Bag of keywords 统计词语的两个api
 bag_of_keywords = np.array(list(bag_of_keywords))
 bok_tfidf = TfidfVectorizer(lowercase = False, min_df = 1, vocabulary=bag_of_keywords)
 X_bok_tfidf = bok_tfidf.fit_transform(sentences)
@@ -140,6 +140,7 @@ bok_count = CountVectorizer(lowercase=False,min_df=1,vocabulary=bag_of_keywords)
 X_bok_count = bok_count.fit_transform(sentences)
 X_bok_count = X_bok_count.toarray()
 
+bok_count.fit_transform(['drop drop drop weeks gain']).toarray()
 # print(PS('rise',contents,labels))
 ## Category tag
 category_tags = set(['published','presented','unveil','investment','bankrupt','acquisition','government'
@@ -174,9 +175,10 @@ X_ct_idf = X_ct_idf.toarray()
 full_tfidf = TfidfVectorizer(lowercase=False, min_df = 1,vocabulary=bag_of_keywords,use_idf=False)
 X_full_tfidf = full_tfidf.fit_transform(sentences)
 X_full_tfidf = X_full_tfidf.toarray()
-import IPython
-IPython.embed()
+
+
 num_classes = 2
+
 x = X_bok_count
 y = np.array(labels)
 y = to_categorical(y,num_classes=2)
@@ -203,6 +205,9 @@ model.compile(loss = 'categorical_crossentropy',
                metrics = ['accuracy'])
 #verbose=1:更新日志 verbose=2:每个epoch一个进度行
 model.fit(x[0:660],y,epochs=10, batch_size=32)
+
+import IPython
+IPython.embed()
 # model.predict(np.array([[0]*x.shape[]]))
 # for row in rows:
 # 	rows[rows.index(row)] = review_to_words(row)
