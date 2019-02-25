@@ -4,6 +4,7 @@ from nltk.tokenize import WordPunctTokenizer
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn import model_selection
 from sklearn.naive_bayes import GaussianNB
 import xlrd,xlwt
 import numpy as np
@@ -92,6 +93,7 @@ workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Dynamic-Financial-New
 sheet = workbook.sheet_by_index(0)
 contents = sheet.col_values(1)[1:]
 labels_ = sheet.col_values(3)[1:]
+
 nlp = spacy.load('en')
 len_word = 0
 tokens = []
@@ -113,21 +115,22 @@ for content in tqdm(contents):
 		tokens.append(token)
 
 model = Word2Vec(sentences = tokens,min_count = 2)
+
 bag_of_keywords = set(['rise','drop','fall','gain','surge','shrink','jump','slump','surge'])
 stop = False
 bok_size = 100
-# for i in range(10):
-# 	new_words = []
-# 	if stop:break
-# 	for k in bag_of_keywords:
-# 		if k in model.wv.vocab.keys():# wv = wordvector
-# 			new_words.extend(model.most_similar(k))
-# for n in new_words:
-# 	if n[0].islower() and len(n[0])>3 and n[0].isalpha():
-# 		bag_of_keywords.add(n[0])
-# 		if len(bag_of_keywords) == bok_size:
-# 			stop = True
-# 			break
+for i in range(10):
+	new_words = []
+	if stop:break
+	for k in bag_of_keywords:
+		if k in model.wv.vocab.keys():# wv = wordvector
+			new_words.extend(model.most_similar(k))
+for n in new_words:
+	if n[0].islower() and len(n[0])>3 and n[0].isalpha():
+		bag_of_keywords.add(n[0])
+		if len(bag_of_keywords) == bok_size:
+			stop = True
+			break
 '''fit():计算数据的参数，\mu（均值），\sigma（标准差），并存储在对象中（例如实例化的CountVectorizer()等）。
 transform():将这些参数应用到数据集，进行标准化（尺度化）。'''
 
@@ -183,6 +186,7 @@ x = X_bok_count
 y = np.array(labels)
 y = to_categorical(y,num_classes=2)
 
+x_train,x_test,y_train,y_test=model_selection.train_test_split(x[0:660],y,test_size=0.2)
 # x = np.random.random((664,200))
 # y = np.random.random((664, 10))
 
@@ -199,16 +203,16 @@ model.add(Dropout(0.5))
 多层感知器可用于表示凸区域。这意味着，实际上，他们可以学习在一些高维空间中围绕实例绘制形状，以对它们进行分类，从而克服线性可分性的限制。'''
 model.add(Dense(2, activation = 'relu'))
 model.add(Dropout(0.5))
-model.add(Dense(2, activation='softmax'))
+model.add(Dense(2, activation = 'softmax'))
 model.compile(loss = 'categorical_crossentropy',
                optimizer = 'adam',
                metrics = ['accuracy'])
 #verbose=1:更新日志 verbose=2:每个epoch一个进度行
-model.fit(x[0:660],y,epochs=10, batch_size=32)
-
 import IPython
 IPython.embed()
-# model.predict(np.array([[0]*x.shape[]]))
+model.fit(x_train,y_train,epochs=10, batch_size=5)
+# score = model.evaluate(x_test, y_test, batch_size=20)
+model.predict_classes(x_test,batch_size=5)
 # for row in rows:
 # 	rows[rows.index(row)] = review_to_words(row)
 # vectorizer = CountVectorizer(analyzer = "word",   

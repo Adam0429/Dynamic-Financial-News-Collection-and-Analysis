@@ -35,7 +35,7 @@ def rise_or_fall(stockname,start_time):
 		return '暂无数据'
 
 nlp = spacy.load('en')
-path = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data2.xls'
+path = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data3.xls'
 
 workbook = xlrd.open_workbook(path)
 worksheet = workbook.sheet_by_index(0)
@@ -68,6 +68,6 @@ for idx in tqdm(range(0,len(contents))):
 			count += 1 
 
 			
-workbook2.save('data2_label.xls')
+workbook2.save('data3_label.xls')
 
 
