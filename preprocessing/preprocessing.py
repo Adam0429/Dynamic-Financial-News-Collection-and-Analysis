@@ -89,7 +89,7 @@ def PS(w,contents,labels):
 
 
 
-workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data2_label.xls')
+workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data_label.xls')
 sheet = workbook.sheet_by_index(0)
 contents = sheet.col_values(1)[1:]
 labels_ = sheet.col_values(3)[1:]
@@ -107,12 +107,12 @@ for label in labels_:
 	else:
 		labels.append(0)
 for content in tqdm(contents):
-	doc = nlp(content)
-	sents = list(doc.sents)   # 分解为句子
-	for sent in sents:
-		sentences.append(str(sents))
-		token = list(map(str,sent))
-		tokens.append(token)
+	# doc = nlp(content)
+	# sents = list(doc.sents)   # 分解为句子
+	# for sent in sents:
+	sentences.append(content)
+	token = list(map(str,content))
+	tokens.append(token)
 
 model = Word2Vec(sentences = tokens,min_count = 2)
 
@@ -139,7 +139,7 @@ bag_of_keywords = np.array(list(bag_of_keywords))
 bok_tfidf = TfidfVectorizer(lowercase = False, min_df = 1, vocabulary=bag_of_keywords)
 X_bok_tfidf = bok_tfidf.fit_transform(sentences)
 X_bok_tfidf = X_bok_tfidf.toarray()
-bok_count = CountVectorizer(lowercase=False,min_df=1,vocabulary=bag_of_keywords)
+bok_count = CountVectorizer(lowercase=False,min_df=1)
 X_bok_count = bok_count.fit_transform(sentences)
 X_bok_count = X_bok_count.toarray()
 
@@ -186,7 +186,9 @@ x = X_bok_count
 y = np.array(labels)
 y = to_categorical(y,num_classes=2)
 
-x_train,x_test,y_train,y_test=model_selection.train_test_split(x[0:660],y,test_size=0.2)
+
+
+x_train,x_test,y_train,y_test=model_selection.train_test_split(x,y,test_size=0.2)
 # x = np.random.random((664,200))
 # y = np.random.random((664, 10))
 
@@ -208,11 +210,14 @@ model.compile(loss = 'categorical_crossentropy',
                optimizer = 'adam',
                metrics = ['accuracy'])
 #verbose=1:更新日志 verbose=2:每个epoch一个进度行
-import IPython
-IPython.embed()
+
 model.fit(x_train,y_train,epochs=10, batch_size=5)
 # score = model.evaluate(x_test, y_test, batch_size=20)
+import IPython
+IPython.embed()
 model.predict_classes(x_test,batch_size=5)
+
+
 # for row in rows:
 # 	rows[rows.index(row)] = review_to_words(row)
 # vectorizer = CountVectorizer(analyzer = "word",   
