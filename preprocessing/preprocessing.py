@@ -18,10 +18,6 @@ from keras.utils import to_categorical
 # nltk.download()
 
 def review_to_words(review_text):
-	# Function to convert a raw review to a string of words
-	# The input is a single string (a raw movie review), and 
-	# the output is a single string (a preprocessed movie review)
-	#
 	# 1. Remove HTML
 	# review_text = BeautifulSoup(raw_review).get_text() 
 	#
@@ -33,20 +29,20 @@ def review_to_words(review_text):
 	#
 	# 4. In Python, searching a set is much faster than searching
 	#   a list, so convert the stop words to a set
-	stopwords = set(stopwords.words("english"))
-	stopwords = nltk.corpus.stopwords.words('english')
-	stopwords.append('would')
-	stopwords.append('kmh')
-	stopwords.append('mph')
-	stopwords.append('  ')
-	stopwords.append('Reuters')				  
+	_stopwords = set(stopwords.words("english"))
+	_stopwords = nltk.corpus.stopwords.words('english')
+	_stopwords.append('would')
+	_stopwords.append('kmh')
+	_stopwords.append('mph')
+	_stopwords.append('  ')
+	_stopwords.append('Reuters')				  
 	# 
 	# 5. Remove stop words
-	meaningful_words = [w for w in words if not w in stopwords]   
+	meaningful_words = [w for w in words if not w in _stopwords]   
 	#
 	# 6. Join the words back into one string separated by space, 
 	# and return the result.
-	return(' '.join(meaningful_words))
+	return(meaningful_words)
 
 def PS(w,contents,labels):
 	N = len(contents)
@@ -91,8 +87,8 @@ def PS(w,contents,labels):
 
 workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data_label.xls')
 sheet = workbook.sheet_by_index(0)
-contents = sheet.col_values(1)[1:]
-labels_ = sheet.col_values(3)[1:]
+contents = sheet.col_values(1)
+labels_ = sheet.col_values(3)
 
 nlp = spacy.load('en')
 len_word = 0
@@ -110,8 +106,11 @@ for content in tqdm(contents):
 	# doc = nlp(content)
 	# sents = list(doc.sents)   # 分解为句子
 	# for sent in sents:
+	# 	sentences.append(str(sents))
+	# 	token = list(map(str,sent))
+	# 	tokens.append(token)
 	sentences.append(content)
-	token = list(map(str,content))
+	token = review_to_words(content)
 	tokens.append(token)
 
 model = Word2Vec(sentences = tokens,min_count = 2)
@@ -139,12 +138,10 @@ bag_of_keywords = np.array(list(bag_of_keywords))
 bok_tfidf = TfidfVectorizer(lowercase = False, min_df = 1, vocabulary=bag_of_keywords)
 X_bok_tfidf = bok_tfidf.fit_transform(sentences)
 X_bok_tfidf = X_bok_tfidf.toarray()
-bok_count = CountVectorizer(lowercase=False,min_df=1)
+bok_count = CountVectorizer(lowercase=False,min_df=1, vocabulary=bag_of_keywords)
 X_bok_count = bok_count.fit_transform(sentences)
 X_bok_count = X_bok_count.toarray()
 
-bok_count.fit_transform(['drop drop drop weeks gain']).toarray()
-# print(PS('rise',contents,labels))
 ## Category tag
 category_tags = set(['published','presented','unveil','investment','bankrupt','acquisition','government'
                      'sue','lawsuit','highlights'])
@@ -193,29 +190,33 @@ x_train,x_test,y_train,y_test=model_selection.train_test_split(x,y,test_size=0.2
 # y = np.random.random((664, 10))
 
 
-model = Sequential()
-model.add(Dense(units=num_classes, activation = 'sigmoid', input_dim = x.shape[1]))
+nmodel = Sequential()
+nmodel.add(Dense(units=num_classes, activation = 'relu', input_dim = x.shape[1]))
 # 输出就是在输出层有几个神经元,每个神经元代表着一个预测结果,label的序列长度为十，须要十个神经元与之对应。label用to_categorical转换
-model.add(Dropout(0.5))
+nmodel.add(Dropout(0.5))
+#避免过拟合
 ''' 多层的意义
 单层神经网络只能用于表示线性可分离的函数。也就是说非常简单的问题，例如，分类问题中可以被一行整齐地分隔开的两个类。如果你的问题相对简单，那么单层网络就足够了。
 
 然而，我们有兴趣解决的大多数问题都不是线性可分的。
 
 多层感知器可用于表示凸区域。这意味着，实际上，他们可以学习在一些高维空间中围绕实例绘制形状，以对它们进行分类，从而克服线性可分性的限制。'''
-# model.add(Dense(2, activation = 'sigmoid'))
-# model.add(Dropout(0.5))
+nmodel.add(Dense(2, activation = 'relu'))
+nmodel.add(Dropout(0.5))
 # dropout:https://blog.csdn.net/program_developer/article/details/80737724
-model.add(Dense(2, activation = 'softmax'))
-model.compile(loss = 'categorical_crossentropy',
+nmodel.add(Dense(2, activation = 'softmax'))
+nmodel.compile(loss = 'categorical_crossentropy',
                optimizer = 'adam',
                metrics = ['accuracy'])
 #verbose=1:更新日志 verbose=2:每个epoch一个进度行
 
-model.fit(x_train,y_train,epochs=10, batch_size=5)
+nmodel.fit(x_train,y_train,epochs=10, batch_size=5)
 # score = model.evaluate(x_test, y_test, batch_size=20)
 
-model.predict_classes(x_test,batch_size=5)
+
+predict = nmodel.predict_classes(x_test,batch_size=5)
+
+# for i in range(predict)
 
 import IPython
 IPython.embed()

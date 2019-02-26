@@ -1,5 +1,22 @@
 # Dynamic-Financial-News-Collection-and-Analysis
 Final project
+
+## 问题
+
+要服务器
+
+
+1. 数据怎么处理。每句话当成一条？数据应该每个公司分一条吗？
+
+
+2. 人都预测不准，模型怎么才叫准，负面新闻不一定代表股票会降。给例子
+
+
+3. 预测全是一个结果怎么回事
+
+
+4. 怎么调参
+
 ## 爬虫数据来源
 Reuters 
 
