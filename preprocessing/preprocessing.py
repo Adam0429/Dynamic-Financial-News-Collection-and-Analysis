@@ -194,7 +194,7 @@ x_train,x_test,y_train,y_test=model_selection.train_test_split(x,y,test_size=0.2
 
 
 model = Sequential()
-model.add(Dense(units=num_classes, activation = 'relu', input_dim = x.shape[1]))
+model.add(Dense(units=num_classes, activation = 'sigmoid', input_dim = x.shape[1]))
 # 输出就是在输出层有几个神经元,每个神经元代表着一个预测结果,label的序列长度为十，须要十个神经元与之对应。label用to_categorical转换
 model.add(Dropout(0.5))
 ''' 多层的意义
@@ -203,8 +203,9 @@ model.add(Dropout(0.5))
 然而，我们有兴趣解决的大多数问题都不是线性可分的。
 
 多层感知器可用于表示凸区域。这意味着，实际上，他们可以学习在一些高维空间中围绕实例绘制形状，以对它们进行分类，从而克服线性可分性的限制。'''
-model.add(Dense(2, activation = 'relu'))
-model.add(Dropout(0.5))
+# model.add(Dense(2, activation = 'sigmoid'))
+# model.add(Dropout(0.5))
+# dropout:https://blog.csdn.net/program_developer/article/details/80737724
 model.add(Dense(2, activation = 'softmax'))
 model.compile(loss = 'categorical_crossentropy',
                optimizer = 'adam',
@@ -213,10 +214,11 @@ model.compile(loss = 'categorical_crossentropy',
 
 model.fit(x_train,y_train,epochs=10, batch_size=5)
 # score = model.evaluate(x_test, y_test, batch_size=20)
-import IPython
-IPython.embed()
+
 model.predict_classes(x_test,batch_size=5)
 
+import IPython
+IPython.embed()
 
 # for row in rows:
 # 	rows[rows.index(row)] = review_to_words(row)
