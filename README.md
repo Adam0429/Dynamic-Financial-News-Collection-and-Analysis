@@ -17,6 +17,7 @@ Final project
 
 4. 怎么调参
 
+
 ## 爬虫数据来源
 Reuters 
 
@@ -39,3 +40,7 @@ Booloomberg
 
 
 attention mechanism
+
+
+
+先做情感分析和股票的对应关系
