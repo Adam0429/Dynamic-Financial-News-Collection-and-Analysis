@@ -7,6 +7,35 @@ import random
 from textblob import TextBlob
 import numpy
 import IPython
+import re
+from nltk.corpus import stopwords
+
+def review_to_words(review_text):
+    # 1. Remove HTML
+    # review_text = BeautifulSoup(raw_review).get_text() 
+    #
+    # 2. Remove non-letters     
+    letters_only = re.sub("[^a-zA-Z]", " ", review_text) 
+    #
+    # 3. Convert to lower case, split into individual words
+    words = letters_only.lower().split()                             
+    #
+    # 4. In Python, searching a set is much faster than searching
+    #   a list, so convert the stop words to a set
+    _stopwords = set(stopwords.words("english"))
+    _stopwords = nltk.corpus.stopwords.words('english')
+    _stopwords.append('would')
+    _stopwords.append('kmh')
+    _stopwords.append('mph')
+    _stopwords.append('  ')
+    _stopwords.append('Reuters')                  
+    # 
+    # 5. Remove stop words
+    meaningful_words = [w for w in words if not w in _stopwords]   
+    #
+    # 6. Join the words back into one string separated by space, 
+    # and return the result.
+    return(meaningful_words)
 
 sn = SenticNet()
 # concept_info = sn.concept('love')
@@ -27,22 +56,16 @@ def sentiment_score_list(text):
     #         count += 1
     #         # print(word,sn.polarity_intense(word))
     # if count == 0: #mid
-    #     return 2 
-    # # if score/count>-0.1 and score/count<0.1:
-    # #     return 2
-    # elif score/count<0: #neg
-    #     return 0
-    # elif score/count>0: #pos
-    #     return 4
-    # if score/count>-0.1 and score/count<0.1:
-    #     return 2
+    #     return -1 
+    # # # if score/count>-0.1 and score/count<0.1:
+    # # #     return 2
+    # # elif score/count<0: #neg
+    # #     return 0
+    # return score/count
 
     t = TextBlob(text)
     score = t.sentiment.polarity
-    if score<0.2: #neg
-        return 0
-    elif score>0.2: #pos
-        return 4
+    return score
 
 
 # scores = []
@@ -76,13 +99,28 @@ labels = worksheet.col_values(3)[1:]
 
 score_list = []
 label_list = []
+
+pos_words = {}
+neg_words = {}
 for i in tqdm(range(0,len(contents))):
+    tokens = review_to_words(contents[i])
     if set(list(labels[i])) == {'1'}:
         score_list.append(sentiment_score_list(contents[i]))
         label_list.append(1)
+        for token in tokens:
+            if token in pos_words.keys():
+                pos_words[token] += 1
+            else:
+                pos_words[token] = 1 
     if set(list(labels[i])) == {'0'}:
         score_list.append(sentiment_score_list(contents[i]))
         label_list.append(0)
+        for token in tokens:
+            if token in neg_words.keys():
+                neg_words[token] += 1
+            else:
+                neg_words[token] = 1 
+
 
 data = {
        'scores':score_list,
@@ -92,6 +130,9 @@ data = {
 df = pd.DataFrame(data)
 print(df)
 print(df.corr("kendall"))
+
+res = sorted(neg_words.items(),key=lambda neg_words:neg_words[1],reverse=False)
+print(res)
 
 # pearson：Pearson相关系数来衡量两个数据集合是否在一条线上面，即针对线性数据的相关系数计算，针对非线性                                           数据便会有误差。
 
