@@ -32,6 +32,15 @@ Booloomberg
 
 attention mechanism
 
+gu piao
 
 
-先做情感分析和股票的对应关系
+股票涨跌与新闻情感极性的相关性
+         
+         scores    labels
+         
+scores  1.000000  0.068339
+
+labels  0.068339  1.000000
+
+
