@@ -10,18 +10,10 @@ import IPython
 import re
 from nltk.corpus import stopwords
 
-def review_to_words(review_text):
-    # 1. Remove HTML
-    # review_text = BeautifulSoup(raw_review).get_text() 
-    #
-    # 2. Remove non-letters     
+def review_to_words(review_text):   
     letters_only = re.sub("[^a-zA-Z]", " ", review_text) 
-    #
-    # 3. Convert to lower case, split into individual words
     words = letters_only.lower().split()                             
-    #
-    # 4. In Python, searching a set is much faster than searching
-    #   a list, so convert the stop words to a set
+
     _stopwords = set(stopwords.words("english"))
     _stopwords = nltk.corpus.stopwords.words('english')
     _stopwords.append('would')
@@ -29,12 +21,9 @@ def review_to_words(review_text):
     _stopwords.append('mph')
     _stopwords.append('  ')
     _stopwords.append('Reuters')                  
-    # 
-    # 5. Remove stop words
+
     meaningful_words = [w for w in words if not w in _stopwords]   
-    #
-    # 6. Join the words back into one string separated by space, 
-    # and return the result.
+
     return(meaningful_words)
 
 sn = SenticNet()

@@ -4,70 +4,68 @@ import datetime
 import pandas as pd
 import pandas_datareader.data as web
 from tqdm import tqdm
-import spacy
+from nltk import sent_tokenize
+import IPython
+import glob
+# import spacy
 
-def rise_or_fall(stockname,start_time):
+def recent_price(stockname,start_time):
 	# today = datetime.date.today()
-	st = datetime.datetime.strptime(start_time, '%Y-%m-%d')
-	if st.weekday() in [4,5,6]:#周五，六，日
-		if st.weekday() == 4:
-			et = st - datetime.timedelta(days=-3)
-		elif st.weekday() == 5:
-			st = st - datetime.timedelta(days=1)
-			et = st - datetime.timedelta(days=-3)
-		else:
-			st = st - datetime.timedelta(days=2)
-			et = st - datetime.timedelta(days=-3)
-
-	else:
-		st = datetime.datetime.strptime(start_time, '%Y-%m-%d')
-		et = st - datetime.timedelta(days=-1)
-	end_time = et.strftime("%Y-%m-%d")
-	start_time = st.strftime("%Y-%m-%d")
+	date = start_time.split('-')
+	t1 = pd.Timestamp(datetime.datetime(int(date[0]),int(date[1]),int(date[2]),0,0,0))  # 创建一个datetime.datetime
+	# High            155.789993
+	# Low             154.600006
+	# Open            155.570007
+	# Close           155.720001
+	# Volume       521800.000000
+	# Adj Close       153.603760
 	try:
-		prices = web.DataReader(stockname, 'yahoo', start_time,end_time)
-		
-		if prices['Close'][1]-prices['Close'][0] > 0:
-			return '1'
-		else:
-			return '0'
+		prices = web.DataReader(stockname, 'yahoo')
+		today_index = list(prices.index).index(t1)
+		tomorrow_index = prices.index[today_index+1]
+		recent_indexs = [prices.index[today_index+i] for i in range(0,6)]
+		data = []
+		for index in recent_indexs:
+			data.append(prices.loc[index]['Close'])
 	except:
-		return '暂无数据'
+		return
+	return data
 
-nlp = spacy.load('en')
-path = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data3.xls'
+# path = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data2.xls'
+path = r'data/data*.xls'
 
-workbook = xlrd.open_workbook(path)
-worksheet = workbook.sheet_by_index(0)
-workbook2 = xlwt.Workbook(encoding = 'utf-8')
-worksheet2 = workbook2.add_sheet('label',cell_overwrite_ok=True)
+for path in tqdm(glob.glob(path)):
+	workbook = xlrd.open_workbook(path)
+	worksheet = workbook.sheet_by_index(0)
+	workbook2 = xlwt.Workbook(encoding = 'utf-8')
+	worksheet2 = workbook2.add_sheet('label',cell_overwrite_ok=True)
 
-titles = worksheet.col_values(0)[1:]
-contents = worksheet.col_values(4)[1:]
-dates = worksheet.col_values(5)[1:]
-count = 0
-for idx in tqdm(range(0,len(contents))):
-	stocks = ''
-	# worksheet2.write(idx,1,contents[idx])
-	doc = nlp(contents[idx])
-	sents = list(doc.sents)
-	for sent in sents:
-		label = []
-		sent = str(sent)
-		for relations in _list:
-			for item in relations[1:]:
-				if item in sent:
-					stocks += relations[1] + '    '
-					label.append(rise_or_fall(relations[0],dates[idx]))
-					break
-		if len(label) != 0:
-			worksheet2.write(count,0,titles[idx])
-			worksheet2.write(count,1,sent)
-			worksheet2.write(count,2,stocks)
-			worksheet2.write(count,3,','.join(label))
-			count += 1 
+	titles = worksheet.col_values(0)[1:]
+	contents = worksheet.col_values(4)[1:]
+	dates = worksheet.col_values(5)[1:]
+	count = 0
+	for idx in tqdm(range(0,len(contents))):
+		stocks = ''
+		# worksheet2.write(idx,1,contents[idx])
 
-			
-workbook2.save('data3_label.xls')
+		sents = sent_tokenize(contents[idx])
+
+		for sent in sents:
+			label = []
+			sent = sent
+			for relations in _list:
+				for item in relations[1:len(relations)-1]: # 不按“领域”标注公司
+					if item in sent:
+						recent_prices = recent_price(relations[0],dates[idx])
+						if recent_prices != None:
+							worksheet2.write(count,0,titles[idx])
+							worksheet2.write(count,1,sent)
+							worksheet2.write(count,2,relations[1])
+							worksheet2.write(count,3,str(recent_prices))
+							count += 1
+						break
+		
+		
+workbook2.save('data22_label.xls')
 
 

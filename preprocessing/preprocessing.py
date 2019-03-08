@@ -8,7 +8,7 @@ from sklearn import model_selection
 from sklearn.naive_bayes import GaussianNB
 import xlrd,xlwt
 import numpy as np
-import spacy
+# import spacy
 from gensim.models import Word2Vec
 from tqdm import tqdm
 from keras.models import Sequential
@@ -86,11 +86,9 @@ def PS(w,contents,labels):
 
 
 workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data_label.xls')
-sheet = workbook.sheet_by_index(0)
-contents = sheet.col_values(1)
+pcontents = sheet.col_values(1)
 labels_ = sheet.col_values(3)
 
-nlp = spacy.load('en')
 len_word = 0
 tokens = []
 sentences = []
