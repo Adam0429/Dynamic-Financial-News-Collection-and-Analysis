@@ -35,12 +35,36 @@ attention mechanism
 gu piao
 
 
-股票涨跌与新闻情感极性的相关性
+股票涨跌（后五天的）与新闻情感极性的相关性
          
-         scores    labels
-         
-scores  1.000000  0.068339
+        scores    rates
+               
+scores  1.00000  0.01073
 
-labels  0.068339  1.000000
+rates   0.01073  1.00000
+
+        scores     rates
+        
+scores  1.000000 -0.007373
+
+rates  -0.007373  1.000000
+
+          scores     rates
+
+scores  1.000000  0.019477
+
+rates   0.019477  1.000000
+
+         scores     rates
+
+scores  1.000000 -0.003658
+
+rates  -0.003658  1.000000
+
+         scores     rates
+
+scores  1.000000 -0.075723
+
+rates  -0.075723  1.000000
 
 

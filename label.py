@@ -27,14 +27,18 @@ def recent_price(stockname,start_time):
 		data = []
 		for index in recent_indexs:
 			data.append(prices.loc[index]['Close'])
+	except KeyboardInterrupt:
+		exit()
 	except:
 		return
 	return data
 
 # path = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data2.xls'
-path = r'data/data*.xls'
+path = r'data*.xls'
 
+_contents = []
 for path in tqdm(glob.glob(path)):
+
 	workbook = xlrd.open_workbook(path)
 	worksheet = workbook.sheet_by_index(0)
 	workbook2 = xlwt.Workbook(encoding = 'utf-8')
@@ -45,12 +49,15 @@ for path in tqdm(glob.glob(path)):
 	dates = worksheet.col_values(5)[1:]
 	count = 0
 	for idx in tqdm(range(0,len(contents))):
-		stocks = ''
 		# worksheet2.write(idx,1,contents[idx])
+		if contents[idx] in _contents:
+				continue
+		else:
+			_contents.append(contents[idx])
+		# 去重
 
 		sents = sent_tokenize(contents[idx])
-
-		for sent in sents:
+		for sent in sents:			
 			label = []
 			sent = sent
 			for relations in _list:
@@ -62,10 +69,11 @@ for path in tqdm(glob.glob(path)):
 							worksheet2.write(count,1,sent)
 							worksheet2.write(count,2,relations[1])
 							worksheet2.write(count,3,str(recent_prices))
+							worksheet2.write(count,4,dates[idx])
 							count += 1
 						break
 		
-		
-workbook2.save('data22_label.xls')
+
+workbook2.save('data_labeled.xls')
 
 
