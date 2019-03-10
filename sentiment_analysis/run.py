@@ -5,11 +5,13 @@ import xlrd
 import pandas as pd
 import random
 from textblob import TextBlob
-import numpy
+import numpy as np
 import IPython
 import re
 from nltk.corpus import stopwords
 import json
+
+# Context-aware Sentiment Detection From Ratings  Yichao Lu, Ruihai Dong, Barry Smyth
 
 def review_to_words(review_text):   
     letters_only = re.sub("[^a-zA-Z]", " ", review_text) 
@@ -27,7 +29,7 @@ def review_to_words(review_text):
 
     return(meaningful_words)
 
-sn = SenticNet()
+# sn = SenticNet()
 # concept_info = sn.concept('love')
 # polarity_value = sn.polarity_value('love')
 # polarity_intense = sn.polarity_intense('love')
@@ -85,10 +87,14 @@ prices = worksheet.col_values(3)
 score_list = []
 label_list = []
 
-pos_words = {}
-neg_words = {}
+count = {}
+# neg_words = {}
+
+POS = 0
+NEG = 0
 
 rates = []
+
 for i in tqdm(range(0,len(contents))):
     tokens = review_to_words(contents[i])
     price_list = json.loads(prices[i])
@@ -98,23 +104,42 @@ for i in tqdm(range(0,len(contents))):
         rate.append((price_list[idx]-price_list[0])/price_list[0])
     rates.append(rate)
     score_list.append(sentiment_score(contents[i]))
-        # if set(list(labels[i])) == {'1'}:
-        #     score_list.append(sentiment_score(contents[i]))
-        #     label_list.append(1)
-        #     for token in tokens:
-        #         if token in pos_words.keys():
-        #             pos_words[token] += 1
-        #         else:
-        #             pos_words[token] = 1 
-        # if set(list(labels[i])) == {'0'}:
-        #     score_list.append(sentiment_score(contents[i]))
-        #     label_list.append(0)
-        #     for token in tokens:
-        #         if token in neg_words.keys():
-        #             neg_words[token] += 1
-        #         else:
-        #             neg_words[token] = 1 
+    if 'not' not in tokens:
+        if rate[0]>0:
+            POS += len(tokens)
+            for token in tokens:
+                if token in count.keys():
+                    count[token]['pos'] += 1
+                else:
+                    count[token] = {'pos':1,'neg':0} 
 
+        if rate[0]<0:
+            NEG += len(tokens)
+            for token in tokens:
+                if token in count.keys():
+                    count[token]['neg'] += 1
+                else:
+                    count[token] = {'pos':0,'neg':1} 
+    else:
+        if rate[0]>0:
+            POS += len(tokens)
+            for token in tokens:
+                token = 'not_'+token
+                if token in count.keys():
+                    count[token]['pos'] += 1
+                else:
+                    count[token] = {'pos':1,'neg':0} 
+
+        if rate[0]<0:
+            NEG += len(tokens)
+            for token in tokens:
+                token = 'not_'+token
+                if token in count.keys():
+                    count[token]['neg'] += 1
+                else:
+                    count[token] = {'pos':0,'neg':1} 
+
+# 情感极性与五天内新闻涨跌比率的相关度
 # fiveday_rate_list = []
 for i in range(0,5):
     rate = [x[i] for x in rates]
@@ -125,10 +150,82 @@ for i in range(0,5):
 
     df = pd.DataFrame(data)
     # print(df)
-    print(df.corr("kendall"))
+    # print(df.corr("kendall"))
 
-# res = sorted(neg_words.items(),key=lambda neg_words:neg_words[1],reverse=False)
+
+
+
+# freq
+copy = count.copy()
+sent_words = [] # PD>15情感值
+
+for word,value in tqdm(copy.items()):
+    if value['pos']+value['neg']<10:
+        del count[word]
+        continue
+    pos = value['pos']/POS
+    neg = value['neg']/NEG
+    
+    value['PD'] = (pos+neg)/(pos-neg) # polarity difference
+    if abs(value['PD']) > 20:
+        sent_words.append(word) 
+    count[word]['sent'] = value['PD']*value['PD'] * np.sign(value['PD'])
+
+
+# res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
+res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
+
+sent_words.remove('u')
+contents = list(set(contents))
+sentiment_feature = {}
+sf_len = 0
+for w in sent_words:
+    for i in range(0,len(contents)):
+        if w not in contents[i]:
+            continue
+        score = sentiment_score(contents[i])
+        tokens = review_to_words(contents[i])
+        for f in tokens:
+            if f != w and f not in sent_words:
+                sf_len += 1
+                if w+'_'+f not in sentiment_feature.keys():
+                    sentiment_feature[w+'_'+f] = {'pos':0,'neg':0}
+                else:
+                    if score > 0.01:
+                        sentiment_feature[w+'_'+f]['pos'] += 1
+                    if score < -0.01:
+                        sentiment_feature[w+'_'+f]['neg'] += 1
+
+copy = sentiment_feature.copy()
+avg_sf = sf_len/len(sentiment_feature.keys())
+
+for word,value in tqdm(copy.items()):
+    if value['pos']+value['neg']<avg_sf:
+        del sentiment_feature[word]
+        continue
+    pos = value['pos']/POS
+    neg = value['neg']/NEG
+    
+    value['PD'] = (pos+neg)/(pos-neg) # polarity difference
+    sentiment_feature[word]['sent'] = value['PD'] * value['PD'] * np.sign(value['PD'])
+
+# print(sentiment_feature)
+res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['PD'],reverse=False)
 # print(res)
+for r in res[:10]:
+    print(r[0],r[1]['sent'])
+
+print('========================')
+
+for r in res[-10:]:
+    print(r[0],r[1]['sent'])
+
+# for sf,value in sentiment_feature.items():
+#     if value['pos']+value['neg'] > avg_sf:
+#         print(sf,freq)
+
+# print(count.items())
+# IPython.embed()
 
 # pearson：Pearson相关系数来衡量两个数据集合是否在一条线上面，即针对线性数据的相关系数计算，针对非线性数据便会有误差。
 # kendall：用于反映分类变量相关性的指标，即针对无序序列的相关系数，非正太分布的数据
