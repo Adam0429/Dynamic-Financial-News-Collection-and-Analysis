@@ -1,6 +1,6 @@
 import requests
-import socks
-import socket
+# import socks
+# import socket
 import time
 import datetime
 import time
@@ -34,14 +34,14 @@ def get(url,headers={},params=()):
             exit()
         except:
             print('retry')
-    print(url+' 请求成功')
+    print(url+' success')
     return r
 
 
 
-socks.set_default_proxy(socks.SOCKS5,"127.0.0.1",1080)
-socket.socket = socks.socksocket
-s = requests.session()
+# socks.set_default_proxy(socks.SOCKS5,"127.0.0.1",1080)
+# socket.socket = socks.socksocket
+# s = requests.session()
 # s.proxies = {"http": "127.0.0.1:1080","https": "127.0.0.1:1080"}
 article_url = 'http://www.reuters.com/article/json/data-id'
 headers = {
@@ -53,20 +53,26 @@ headers = {
     'authority': 'www.reuters.com',
     'x-requested-with': 'XMLHttpRequest',
 }
-now = int(str(int(time.time()))+'000')
+# now = int(str(int(time.time()))+'000')
 # one_day = 86400
 # yesterday = int(time.mktime(datetime.date.today().timetuple())) - one_day # 昨天0点
 # yesterday = int(str(yesterday)+'000')
 # 'http://www.reuters.com/article/json/data-idUSL3N1ZB0RL'
 
-params = (
-    ('limit',100),
-    ('channel',113) # US market news 
-    # ('endTime',now)
-)
 
 
-for i in range(5,20):
+
+for i in range(7,200):
+    day = 86400000*(i-6)
+    date =  1515979236000
+    t  = date + day 
+    # yesterday = int(time.mktime(datetime.date.today().timetuple())) - one_day # 昨天0点
+    # yesterday = int(str(yesterday)+'000')
+    params = (
+    ('limit',2000),
+    ('channel',113), # US market news 
+    ('endTime',t)
+    )
     r = get('https://mobile.reuters.com/assets/jsonHeadlines', headers=headers, params=params)
     stutas = r.status_code
     # except:
@@ -89,7 +95,7 @@ for i in range(5,20):
         worksheet.write(idx+1,1,datas[idx]['id'])
         worksheet.write(idx+1,2,url)
         worksheet.write(idx+1,3,datas[idx]['dateMillis'])
-        r = get(url, headers=headers)
+        r = get(url, headers=headers,params=params)
         data = r.json()['story']
         published = data['published']
         dateArray = datetime.datetime.utcfromtimestamp(published)
@@ -101,7 +107,6 @@ for i in range(5,20):
 
 
     workbook.save('data'+str(i)+'.xls')
-    sleep(86400*5)
 # for data in tqdm(datas):
 #     url = host + data['url']
 #     r = requests.get(url, headers=headers,verify=False)

@@ -220,6 +220,8 @@ print('========================')
 for r in res[-10:]:
     print(r[0],r[1]['sent'])
 
+
+
 # for sf,value in sentiment_feature.items():
 #     if value['pos']+value['neg'] > avg_sf:
 #         print(sf,freq)
