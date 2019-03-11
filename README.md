@@ -35,36 +35,37 @@ attention mechanism
 
 ## 一些实验
 ## 股票涨跌（后五天的）与新闻情感极性的相关性
-         
-        scores    rates
-               
-scores  1.00000  0.01073
+   
+             scores     rates
 
-rates   0.01073  1.00000
+scores  1.000000  0.031765
 
-        scores     rates
-        
-scores  1.000000 -0.007373
-
-rates  -0.007373  1.000000
+rates   0.031765  1.000000
 
           scores     rates
 
-scores  1.000000  0.019477
+scores  1.000000  0.017745
 
-rates   0.019477  1.000000
+rates   0.017745  1.000000
 
-         scores     rates
+          scores     rates
 
-scores  1.000000 -0.003658
+scores  1.000000  0.019571
 
-rates  -0.003658  1.000000
+rates   0.019571  1.000000
 
-         scores     rates
+          scores     rates
 
-scores  1.000000 -0.075723
+scores  1.000000  0.023022
 
-rates  -0.075723  1.000000
+rates   0.023022  1.000000
+
+          scores     rates
+
+scores  1.000000  0.013875
+
+rates   0.013875  1.000000
+
 
 ## 从论文中复现情感词库的生成: 
 
@@ -75,44 +76,44 @@ Yichao Lu, Ruihai Dong, Barry Smyth
 
 情感词库:
 
-stock_stocks -49389.001322313336
+inc_since -207627.74023083402
 
-stock_indexes -197.56534472913475
+high_u -207627.74023083402
 
-stock_companies -197.56534472913475
+market_live -207627.7402308294
 
-said_strategy -30.582629436215125
+market_take -207627.7402308294
 
-said_u -22.28163273039045
+industrial_gain -207627.7402308294
 
-said_percent -22.28163273039045
+industrial_day -207627.7402308294
 
-investment_e -13.991643535427317
+stocks_among -207627.7402308294
 
-create_e -13.991643535427317
+led_stage -207627.7402308294
 
-create_fund -13.991643535427317
+corp_growth -207627.7402308294
 
-asset_banks -4.252466078618018
+inc_stake -207627.7402308294
 
 ========================
 
-new_inc 13.865215462366422
+stocks_p 699.5460327621929
 
-stock_pct 19.280970135917414
+inc_including 699.5460327621929
 
-investment_german 30.158519970948976
+high_reuters 699.5460327621929
 
-create_german 30.158519970948976
+market_morgan 1106.2689809927922
 
-stock_live 58.52612564857034
+corp_corporate 1106.2689809927922
 
-stock_profit 58.52612564857034
+main_reuters 1106.2689809927922
 
-stock_updates 58.52612564857034
+point_stanley 1106.2689809927922
 
-new_live 58.52612564857034
+stocks_u 1106.2689809927936
 
-investment_fund 190.52059246630097
+market_said 2254.183527774366
 
-share_inc 190.52059246630097
+updates_pct 12929.046683319246

@@ -150,7 +150,7 @@ for i in range(0,5):
 
     df = pd.DataFrame(data)
     # print(df)
-    # print(df.corr("kendall"))
+    print(df.corr("kendall"))
 
 
 
@@ -171,11 +171,10 @@ for word,value in tqdm(copy.items()):
         sent_words.append(word) 
     count[word]['sent'] = value['PD']*value['PD'] * np.sign(value['PD'])
 
-
+sent_words.remove('e')
 # res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
 res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
 
-sent_words.remove('u')
 contents = list(set(contents))
 sentiment_feature = {}
 sf_len = 0

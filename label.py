@@ -37,13 +37,15 @@ def recent_price(stockname,start_time):
 path = r'data*.xls'
 
 _contents = []
+
+workbook2 = xlwt.Workbook(encoding = 'utf-8')
+worksheet2 = workbook2.add_sheet('label',cell_overwrite_ok=True)
+
 for path in tqdm(glob.glob(path)):
 
 	workbook = xlrd.open_workbook(path)
 	worksheet = workbook.sheet_by_index(0)
-	workbook2 = xlwt.Workbook(encoding = 'utf-8')
-	worksheet2 = workbook2.add_sheet('label',cell_overwrite_ok=True)
-
+	
 	titles = worksheet.col_values(0)[1:]
 	contents = worksheet.col_values(4)[1:]
 	dates = worksheet.col_values(5)[1:]
@@ -75,5 +77,6 @@ for path in tqdm(glob.glob(path)):
 		
 
 workbook2.save('data_labeled.xls')
+
 
 
