@@ -11,6 +11,7 @@ import re
 from nltk.corpus import stopwords
 import json
 
+
 # Context-aware Sentiment Detection From Ratings  Yichao Lu, Ruihai Dong, Barry Smyth
 
 def review_to_words(review_text):   
@@ -47,9 +48,9 @@ def sentiment_score(text):
     # count = 0
     # for word,tag in pos_tags:
     #   if word in sn.data.keys():
-    #      score += float(sn.polarity_intense(word))
-    #      count += 1
-    #      # print(word,sn.polarity_intense(word))
+    #     score += float(sn.polarity_intense(word))
+    #     count += 1
+    #     # print(word,sn.polarity_intense(word))
     # if count == 0: #mid
     #   return -1 
     # return score/count
@@ -66,18 +67,18 @@ def sentiment_score(text):
 # for i in tqdm(range(0,10000)):
 #   i = int(random.random()*1599999)
 #   if workbook.loc[i][0] == 0:
-#      neg_count += 1
-#      if workbook.loc[i][0] == sentiment_score_list(workbook.loc[i][5]):
-#        neg_correct += 1
+#     neg_count += 1
+#     if workbook.loc[i][0] == sentiment_score_list(workbook.loc[i][5]):
+#      neg_correct += 1
 #   elif workbook.loc[i][0] == 4:
-#      pos_count += 1
-#      if workbook.loc[i][0] == sentiment_score_list(workbook.loc[i][5]):
-#        pos_correct += 1
+#     pos_count += 1
+#     if workbook.loc[i][0] == sentiment_score_list(workbook.loc[i][5]):
+#      pos_correct += 1
 # print('pos',pos_correct/pos_count,pos_count,pos_correct)
 # print('neg',neg_correct/neg_count,neg_count,neg_correct)
 
 
-path = r'data/data_labeled.xls'
+path = r'data/labeled_data.xls'
 
 workbook = xlrd.open_workbook(path)
 worksheet = workbook.sheet_by_index(0)
@@ -95,6 +96,7 @@ NEG = 0
 
 rates = []
 
+
 for i in tqdm(range(0,len(contents))):
     tokens = review_to_words(contents[i])
     price_list = json.loads(prices[i])
@@ -108,6 +110,8 @@ for i in tqdm(range(0,len(contents))):
         if rate[0]>0:
             POS += len(tokens)
             for token in tokens:
+                if len(token) < 3:
+                    continue
                 if token in count.keys():
                     count[token]['pos'] += 1
                 else:
@@ -116,6 +120,8 @@ for i in tqdm(range(0,len(contents))):
         if rate[0]<0:
             NEG += len(tokens)
             for token in tokens:
+                if len(token) < 3:
+                    continue
                 if token in count.keys():
                     count[token]['neg'] += 1
                 else:
@@ -124,8 +130,10 @@ for i in tqdm(range(0,len(contents))):
         if rate[0]>0:
             POS += len(tokens)
             for token in tokens:
+                if len(token) < 3:
+                    continue
                 token = 'not_'+token
-                if token in count.keys():
+                if token in count.keys():   
                     count[token]['pos'] += 1
                 else:
                     count[token] = {'pos':1,'neg':0} 
@@ -133,6 +141,8 @@ for i in tqdm(range(0,len(contents))):
         if rate[0]<0:
             NEG += len(tokens)
             for token in tokens:
+                if len(token) < 3:
+                    continue
                 token = 'not_'+token
                 if token in count.keys():
                     count[token]['neg'] += 1
@@ -150,10 +160,11 @@ for i in range(0,5):
 
     df = pd.DataFrame(data)
     # print(df)
-    print(df.corr("kendall"))
+    # print(df.corr("kendall"))
 
 
-
+adj = ['JJ','JJR','JJS','VBG']
+nn = ['NN','NNS','NNP','NNPS']
 
 # freq
 copy = count.copy()
@@ -166,26 +177,31 @@ for word,value in tqdm(copy.items()):
     pos = value['pos']/POS
     neg = value['neg']/NEG
     
-    value['PD'] = (pos+neg)/(pos-neg) # polarity difference
-    if abs(value['PD']) > 20:
+    value['PD'] = (pos-neg)/(pos+neg) # polarity difference
+    if abs(value['PD']) > 0.5 and nltk.pos_tag([word])[0][1] in adj:
         sent_words.append(word) 
     count[word]['sent'] = value['PD']*value['PD'] * np.sign(value['PD'])
 
-sent_words.remove('e')
-# res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
-res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
+# res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
+# print(res)
 
+
+
+
+# res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
+# res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
+# print(res)
 contents = list(set(contents))
 sentiment_feature = {}
 sf_len = 0
-for w in sent_words:
-    for i in range(0,len(contents)):
+for i in tqdm(range(0,len(contents))):
+    for w in sent_words:
         if w not in contents[i]:
             continue
         score = sentiment_score(contents[i])
         tokens = review_to_words(contents[i])
         for f in tokens:
-            if f != w and f not in sent_words:
+            if nltk.pos_tag([f])[0][1] in nn and len(f)>2:
                 sf_len += 1
                 if w+'_'+f not in sentiment_feature.keys():
                     sentiment_feature[w+'_'+f] = {'pos':0,'neg':0}
@@ -209,21 +225,22 @@ for word,value in tqdm(copy.items()):
     sentiment_feature[word]['sent'] = value['PD'] * value['PD'] * np.sign(value['PD'])
 
 # print(sentiment_feature)
-res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['PD'],reverse=False)
+res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
 # print(res)
-for r in res[:10]:
+for r in res[:20]:
     print(r[0],r[1]['sent'])
 
 print('========================')
 
-for r in res[-10:]:
+for r in res[-20:]:
     print(r[0],r[1]['sent'])
 
 
+IPython.embed()
 
 # for sf,value in sentiment_feature.items():
-#     if value['pos']+value['neg'] > avg_sf:
-#         print(sf,freq)
+#    if value['pos']+value['neg'] > avg_sf:
+#       print(sf,freq)
 
 # print(count.items())
 # IPython.embed()
@@ -238,7 +255,7 @@ for r in res[-10:]:
 # contents = sheet.col_values(5)
 # for i in tqdm(range(0,contents)):
 #   if labels[i] == sentiment_score_list(contents[1]):
-#      correct += 1
+#     correct += 1
 
     # print(content,sentiment_score_list(content))
 
