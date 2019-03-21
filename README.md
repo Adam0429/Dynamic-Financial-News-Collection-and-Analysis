@@ -33,39 +33,46 @@ Booloomberg
 
 attention mechanism
 
+对于特定的股票也许有特有的feature(如法人，竞争公司，公司标签等属性)。统计出来看一下
 
 ## 一些实验
-## 股票涨跌（后五天的）与新闻情感极性的相关性
+## 股票涨跌（当天与后五天的）与新闻情感极性的相关性（结论是新闻对涨跌是正相关的，因为当天的新闻对其股价涨跌相关度最大）
    
-             scores     rates
+          scores     rates
 
-scores  1.000000  0.031765
+scores  1.000000  0.047048
 
-rates   0.031765  1.000000
+rates   0.047048  1.000000
 
           scores     rates
 
-scores  1.000000  0.017745
+scores  1.000000  0.010678
 
-rates   0.017745  1.000000
-
-          scores     rates
-
-scores  1.000000  0.019571
-
-rates   0.019571  1.000000
+rates   0.010678  1.000000
 
           scores     rates
 
-scores  1.000000  0.023022
+scores  1.000000  0.013753
 
-rates   0.023022  1.000000
+rates   0.013753  1.000000
 
           scores     rates
 
-scores  1.000000  0.013875
+scores  1.000000 -0.008817
 
-rates   0.013875  1.000000
+rates  -0.008817  1.000000
+
+          scores     rates
+
+scores  1.000000  0.007262
+
+rates   0.007262  1.000000
+
+          scores     rates
+
+scores  1.000000 -0.003498
+
+rates  -0.003498  1.000000
 
 
 ## 从论文中复现情感词库的生成: 
@@ -77,84 +84,44 @@ Yichao Lu, Ruihai Dong, Barry Smyth
 
 情感词库:
 
-live_day -552500.9382821129
-
-soft_estimates -552500.9382821129
-
-wide_apple -552500.9382821129
-
-red_trading -12403.93645483703
-
-old_david -4200.42240470336
-
-red_quarter -2277.837353015036
-
-soft_software -1954.1826934248666
-
-red_apple -1509.9421143199709
-
-red_tax -259.1937636289998
-
-old_morgan -233.949354378491
-
-warning_demand -117.52539385002163
-
-old_paypal -117.52539385002163
-
-red_rights -117.52539385002163
-
-red_month -117.52539385002163
-
-red_support -117.52539385002163
-
-soft_google -117.52539385002163
-
-old_banking -117.52539385002163
-
-able_products -117.52539385002163
-
-soft_profit -117.52539385002163
-
-old_filing -117.52539385002163
-
+rompting_profit -1.0
+prompting_economy -1.0                                     
+representing_inc -1.0
+bad_news -0.36636639172885904
+ongoing_part -6.879569489615561e
+accusing_lawsuit -6.879569489615561e
+giving_month -6.879569489615561e-05
+worried_impact -6.879569489615561e-05
+ongoing_trade 0.17789533430063653
+leaving_company 0.2437923769669283
+representing_group 0.4382878138462364
+sexual_misconduct 0.6901976005690359
+older_pickup 1.0
+tracking_mobile 1.0
+tracking_technology 1.0
+accusing_pharmaceutical 1.0
+winning_day 1.0
+older_weakness 1.0
+ongoing_progress 1.0
+turning_netflix 1.0
 ========================
-
-red_years 910.5891523059694
-
-red_time 910.5891523059694
-
-old_technologies 910.5891523059694
-
-old_citigroup 2751.7052428746124
-
-red_end 2751.7052428746306
-
-live_deliver 2751.7052428746306
-
-red_street 2751.7052428746306
-
-soft_results 2751.7052428746306
-
-old_news 2751.7052428746306
-
-old_amazon 2751.7052428746306
-
-old_outlook 2751.7052428746306
-
-old_motors 2751.7052428746306
-
-red_north 2751.7052428746306
-
-wide_profit 2751.7052428746306
-
-red_summit 2751.7052428746306
-
-easing_shares 2751.7052428746306
-
-easing_quarter 2751.7052428746306
-
-red_rate 2751.7052428746306
-
-old_charges 2751.7052428746306
-
-old_cash 16314.745407323479
+prompting_profit -1.0
+prompting_economy -1.0
+representing_inc -1.0
+bad_news -0.36636639172885904
+ongoing_part -6.879569489615561e-05
+accusing_lawsuit -6.879569489615561e-05
+giving_month -6.879569489615561e-05
+worried_impact -6.879569489615561e-05
+ongoing_trade 0.17789533430063653
+leaving_company 0.2437923769669283
+representing_group 0.4382878138462364
+sexual_misconduct 0.6901976005690359
+older_pickup 1.0
+tracking_mobile 1.0
+tracking_technology 1.0
+accusing_pharmaceutical 1.0
+winning_day 1.0
+older_weakness 1.0
+ongoing_progress 1.0
+turning_netflix 1.0

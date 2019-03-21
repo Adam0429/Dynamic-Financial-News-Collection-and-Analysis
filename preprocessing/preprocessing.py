@@ -14,7 +14,8 @@ from tqdm import tqdm
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.utils import to_categorical
-
+import json
+import IPython
 # nltk.download()
 
 def review_to_words(review_text):
@@ -85,18 +86,21 @@ def PS(w,contents,labels):
 
 
 
-workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data_label.xls')
-pcontents = sheet.col_values(1)
-labels_ = sheet.col_values(3)
+workbook = xlrd.open_workbook(r'data/labeled_data2.xls')
+sheet = workbook.sheet_by_index(0)
+contents = sheet.col_values(1)
+prices = sheet.col_values(3)
 
 len_word = 0
 tokens = []
 sentences = []
 labels = []
-for label in labels_:
-	if '暂无数据' in label:
-		labels.append(0)
-	elif '1' in label and '0' not in label:
+for price in prices:
+	# if '暂无数据' in label:
+	# 	labels.append(0)
+	price_list = json.loads(price)
+	up = price_list[2] - price_list[1]
+	if up > 0:
 		labels.append(1)		
 	else:
 		labels.append(0)
@@ -128,6 +132,7 @@ for n in new_words:
 		if len(bag_of_keywords) == bok_size:
 			stop = True
 			break
+
 '''fit():计算数据的参数，\mu（均值），\sigma（标准差），并存储在对象中（例如实例化的CountVectorizer()等）。
 transform():将这些参数应用到数据集，进行标准化（尺度化）。'''
 
