@@ -11,8 +11,10 @@ import re
 from nltk.corpus import stopwords
 import json
 import inflection as inf
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 
-# Context-aware Sentiment Detection From Ratings  Yichao Lu, Ruihai Dong, Barry Smyth
 
 def review_to_words(review_text): 
     if '(Reuters) -' in review_text:
@@ -21,7 +23,6 @@ def review_to_words(review_text):
         review_text = review_text.split('*')[1]
     letters_only = re.sub("[^a-zA-Z]", " ", review_text) 
     words = letters_only.lower().split()                             
-
     _stopwords = set(stopwords.words("english"))
     _stopwords = nltk.corpus.stopwords.words('english')
     _stopwords.append('would')
@@ -30,10 +31,35 @@ def review_to_words(review_text):
     _stopwords.append('  ')
     _stopwords.append('Reuters')
     _stopwords.append('reuters')                  
+    # _stopwords = []
+    meaningful_words = [w for w in words if not w in _stopwords]
+    return meaningful_words
 
-    meaningful_words = [w for w in words if not w in _stopwords]   
+path = r'data/labeled_data2.xls'
 
-    return(meaningful_words)
+workbook = xlrd.open_workbook(path)
+worksheet = workbook.sheet_by_index(0)
+contents = worksheet.col_values(1)
+prices = worksheet.col_values(3)
+text = ''
+for content in contents:
+    text += ' '.join(review_to_words(content))+' '
+wc = WordCloud(
+    width=1000,
+    height=600,
+    max_font_size=50,            #字体大小
+    min_font_size=10,
+    max_words=1000
+)
+wc.generate(text)
+wc.to_file('jielun.png')    #图片保存
+
+#5.显示图片
+plt.figure('jielun')   #图片显示的名字
+plt.imshow(wc)
+plt.axis('off')        #关闭坐标
+plt.show()
+
 
 # sn = SenticNet()
 # concept_info = sn.concept('love')
@@ -156,6 +182,7 @@ for i in tqdm(range(0,len(contents))):
 
 
 adj = ['JJ','JJR','JJS','VBG']
+vb = ['VB','VBD','VBG','VBN','VBP','VBZ']
 nn = ['NN','NNS','NNP','NNPS']
 
 # freq
@@ -201,12 +228,11 @@ for word,value in tqdm(copy.items()):
     if value<avg_f:
         del feature_words[word]
 
+
+import spacy
+nlp = spacy.load('en')
 sf_len = 0
 for i in tqdm(range(0,len(contents))):
-    # if 'bad' in contents[i] and 'Trump' in contents[i]:
-    #     print(review_to_words(contents[i]))
-    #     IPython.embed()
-
     for w in sent_words:
         if w not in contents[i]:
             continue
@@ -214,10 +240,13 @@ for i in tqdm(range(0,len(contents))):
         tokens = review_to_words(contents[i])
         for f in tokens:
             if f in feature_words and w in tokens:
-                if abs(tokens.index(w)-tokens.index(f))<3:
+                if abs(tokens.index(w)-tokens.index(f))<5:
                     sf_len += 1
                     if w+'_'+f not in sentiment_feature.keys():
-                        sentiment_feature[w+'_'+f] = {'pos':0,'neg':0}
+                        if score > 0.01:
+                            sentiment_feature[w+'_'+f] = {'pos':1,'neg':0}
+                        if score < -0.01:
+                            sentiment_feature[w+'_'+f] = {'pos':0,'neg':1}
                     else:
                         if score > 0.01:
                             sentiment_feature[w+'_'+f]['pos'] += 1
@@ -225,12 +254,15 @@ for i in tqdm(range(0,len(contents))):
                             sentiment_feature[w+'_'+f]['neg'] += 1
 
 copy = sentiment_feature.copy()
-avg_sf = sf_len/len(sentiment_feature.keys())
+# avg_sf = sf_len/len(sentiment_feature.keys())
 
 
 for word,value in tqdm(copy.items()):
-    if value['pos']+value['neg']<avg_sf:
-        del sentiment_feature[word]
+    if value['pos']+value['neg']<3: #avg_sf
+        try:
+            del sentiment_feature[word]
+        except:
+            pass
         continue
     pos = value['pos']/POS
     neg = value['neg']/NEG
@@ -240,14 +272,15 @@ for word,value in tqdm(copy.items()):
 # print(sentiment_feature)
 res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
 # print(res)
-for r in res[:10]:
-    print(r[0],r[1]['sent'])
-
+IPython.embed()
+for r in res[:40]:
+    print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
+    print(' ')
 print('========================')
 
-for r in res[-10:]:
-    print(r[0],r[1]['sent'])
-
+for r in res[-40:]:
+    print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
+    print(' ')
 
 
 # for sf,value in sentiment_feature.items():
