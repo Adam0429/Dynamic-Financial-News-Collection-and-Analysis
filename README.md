@@ -9,6 +9,24 @@ Final project
 按论文方法复现:从涨跌寻找相关词
 
 
+## 文本情感分析可以包含几个方面：
+
+极性分析
+
+标签抽取（属性+评价词）
+
+观点挖掘
+
+观点聚类
+
+评论主体识别
+
+意图识别（用户需求）
+
+评论摘要生成
+
+主观分析
+
 ## 爬虫数据来源
 
 Reuters 
@@ -34,46 +52,50 @@ Booloomberg
 attention mechanism
 
 对于特定的股票也许有特有的feature(如法人，竞争公司，公司标签等属性)。统计出来看一下
+
 针对一只股票画涨跌图 情感图
+
+SO-CAL 情感倾向计算器
 
 ## 一些实验
 ## 股票涨跌（当天与后五天的）与新闻情感极性的相关性（结论是新闻对涨跌是正相关的，因为当天的新闻对其股价涨跌相关度最大）
    
           scores     rates
 
-scores  1.000000  0.047048
+scores  1.000000  0.050964
 
-rates   0.047048  1.000000
-
-          scores     rates
-
-scores  1.000000  0.010678
-
-rates   0.010678  1.000000
+rates   0.050964  1.000000
 
           scores     rates
 
-scores  1.000000  0.013753
+scores  1.000000  0.011592
 
-rates   0.013753  1.000000
+rates   0.011592  1.000000
 
-          scores     rates
 
-scores  1.000000 -0.008817
+         scores    rates
 
-rates  -0.008817  1.000000
+scores  1.00000  0.01245
 
-          scores     rates
-
-scores  1.000000  0.007262
-
-rates   0.007262  1.000000
+rates   0.01245  1.00000
 
           scores     rates
 
-scores  1.000000 -0.003498
+scores  1.000000 -0.009172
 
-rates  -0.003498  1.000000
+rates  -0.009172  1.000000
+
+          scores     rates
+
+scores  1.000000  0.001899
+
+rates   0.001899  1.000000
+
+          scores     rates
+
+scores  1.000000  0.002559
+
+rates   0.002559  1.000000
 
 
 ## 从论文中复现情感词库的生成: 
@@ -85,163 +107,84 @@ Yichao Lu, Ruihai Dong, Barry Smyth
 
 情感词库:
 
-issing_inc -1.0 0 3
+serious_policies -1.0 0 3
 
-worst_caterpillar -1.0 0 3
+blaming_percent -1.0 0 3
 
-worst_day -1.0 0 4
+blaming_warning -1.0 0 3
 
-representing_inc -1.0 0 3
+announcing_companies -1.0 0 3
 
-least_percent -1.0 0 6
+serious_address -1.0 0 8
 
-least_apple -1.0 0 3
+serious_called -1.0 0 4
 
-worst_year -1.0 0 6
+serious_bid -1.0 0 4
 
-monetary_chair -1.0 0 4
+serious_value -1.0 0 7
 
-seeing_impact -1.0 0 3
+renewable_tax -1.0 0 4
 
-reducing_company -1.0 0 3
+serious_said -1.0 0 3
 
-worst_percent -1.0 0 4
+single_companies -1.0 0 3
 
-least_glass -1.0 0 4
+Mexican_control -1.0 0 5
 
-least_time -1.0 0 4
+serious_see -1.0 0 3
 
-pending_billion -1.0 0 4
+serious_proposal -1.0 0 3
 
-hard_hit -0.44778509041787956 1 5
+continuing_euros -1.0 0 4
 
-programming_warner -0.3634664400516885 1 4
+Cable_providers -0.40810495496362637 1 4
 
-least_year -0.3634664400516885 1 4
+Cable_facing -0.40810495496362637 1 4
 
-developing_cancer -0.3634664400516885 1 4
+serious_take -0.2978788357652759 1 3
 
-competitive_company -0.2533900216455929 1 3
+commercial_supplier -0.15066206959874162 1 2
 
-hard_technology -0.2533900216455929 1 3
-
-least_million -0.2533900216455929 1 3
-
-programming_viacom -0.1137986915882441 1 2
-
-missing_analyst -0.1137986915882441 1 2
-
-hard_bank -0.1137986915882441 1 2
-
-programming_rival -0.1137986915882441 1 2
-
-institutional_michael -0.1137986915882441 1 2
-
-institutional_director -0.1137986915882441 1 2
-
-institutional_trading -0.1137986915882441 1 2
-
-worst_week -0.1137986915882441 1 2
-
-hard_caterpillar -0.1137986915882441 1 2
-
-missing_quarter -0.1137986915882441 1 2
-
-least_one -0.1137986915882441 1 2
-
-monetary_decision -0.1137986915882441 1 2
-
-reducing_stake -0.1137986915882441 1 2
-
-missing_billion -0.06463188611941212 3 5
-
-reducing_inc -0.021690552433151118 3 4
-
-least_billion -2.0385030322496052e-05 3 3
-
-hard_maker -2.0385030322495605e-05 2 2
-
-missing_percent 0.011374144641696145 5 4
-
-monetary_reserve 0.011374144641696145 5 4
+commercial_aerospace -0.15066206959874162 1 2
 
 ========================
-original_content 1.0 17 0
 
-institutional_morgan 1.0 5 0
+announcing_plan 1.0 4 0
 
-institutional_stanley 1.0 5 0
+continuing_profit 1.0 3 0
 
-original_cash 1.0 3 0
+commercial_businesses 1.0 5 0
 
-original_risk 1.0 3 0
+huge_percent 1.0 3 0
 
-original_netflix 1.0 13 0
+commercial_leader 1.0 3 0
 
-original_year 1.0 9 0
+huge_said 1.0 3 0
 
-original_carbon 1.0 3 0
+Southern_said 1.0 3 0
 
-competitive_year 1.0 3 0
+single_mid 1.0 5 0
 
-original_iphone 1.0 4 0
+single_revenue 1.0 4 0
 
-original_maker 1.0 4 0
+commercial_rules 1.0 3 0
 
-representing_volkswagen 1.0 3 0
+commercial_relations 1.0 3 0
 
-original_summit 1.0 5 0
+commercial_announced 1.0 3 0
 
-original_ltd 1.0 16 0
+announcing_jumped 1.0 3 0
 
-original_owner 1.0 5 0
+commercial_maker 1.0 6 0
 
-waning_iphone 1.0 9 0
+Belgian_metals 1.0 4 0
 
-waning_face 1.0 8 0
+commercial_ride 1.0 4 0
 
-waning_billion 1.0 7 0
+commercial_automaker 1.0 3 0
 
-original_subscriber 1.0 4 0
+commercial_sharing 1.0 3 0
 
-original_apple 1.0 4 0
+Mexican_said 1.0 3 0
 
-original_ruling 1.0 3 0
-
-developing_stage 1.0 4 0
-
-developing_health 1.0 3 0
-
-developing_insurer 1.0 3 0
-
-developing_acquisition 1.0 4 0
-
-competitive_online 1.0 3 0
-
-competitive_offer 1.0 3 0
-
-developing_electric 1.0 3 0
-
-computing_intel 1.0 3 0
-
-institutional_pension 1.0 3 0
-
-competing_share 1.0 3 0
-
-original_part 1.0 3 0
-
-original_spending 1.0 3 0
-
-original_marketing 1.0 3 0
-
-original_billion 1.0 4 0
-
-representing_tech 1.0 4 0
-
-original_series 1.0 3 0
-
-competing_number 1.0 4 0
-
-original_drug 1.0 3 0
-
-reducing_comment 1.0 3 0
+Belgian_company 1.0 18 0

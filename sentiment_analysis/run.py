@@ -12,8 +12,8 @@ from nltk.corpus import stopwords
 import json
 import inflection as inf
 from wordcloud import WordCloud
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
+import enchant
+# import matplotlib.pyplot as plt
 
 
 def review_to_words(review_text): 
@@ -22,7 +22,7 @@ def review_to_words(review_text):
     if '*' in review_text:
         review_text = review_text.split('*')[1]
     letters_only = re.sub("[^a-zA-Z]", " ", review_text) 
-    words = letters_only.lower().split()                             
+    words = letters_only.split()                             
     _stopwords = set(stopwords.words("english"))
     _stopwords = nltk.corpus.stopwords.words('english')
     _stopwords.append('would')
@@ -35,30 +35,28 @@ def review_to_words(review_text):
     meaningful_words = [w for w in words if not w in _stopwords]
     return meaningful_words
 
-path = r'data/labeled_data2.xls'
+# d = enchant.Dict("en_US")
+import spacy
+nlp = spacy.load('en')
+def stem_and_check(word):
+    word = nlp(word)
+    return word[0].lemma_
+    # word = inf.singularize(word)
+    # word = nltk.PorterStemmer().stem(word)
+    # if d.check(word):
+    #     return word
+    # suggest_words = d.suggest(word)
+    # if len(suggest_words) == 0:
+    #     return word
+    # return suggest_words[0]
 
-workbook = xlrd.open_workbook(path)
-worksheet = workbook.sheet_by_index(0)
-contents = worksheet.col_values(1)
-prices = worksheet.col_values(3)
-text = ''
-for content in contents:
-    text += ' '.join(review_to_words(content))+' '
-wc = WordCloud(
-    width=1000,
-    height=600,
-    max_font_size=50,            #字体大小
-    min_font_size=10,
-    max_words=1000
-)
-wc.generate(text)
-wc.to_file('jielun.png')    #图片保存
 
-#5.显示图片
-plt.figure('jielun')   #图片显示的名字
-plt.imshow(wc)
-plt.axis('off')        #关闭坐标
-plt.show()
+
+# #5.显示图片
+# plt.figure('jielun')   #图片显示的名字
+# plt.imshow(wc)
+# plt.axis('off')        #关闭坐标
+# plt.show()
 
 
 # sn = SenticNet()
@@ -113,9 +111,13 @@ path = r'data/labeled_data2.xls'
 
 workbook = xlrd.open_workbook(path)
 worksheet = workbook.sheet_by_index(0)
-contents = worksheet.col_values(1)
+_contents = worksheet.col_values(1)
 prices = worksheet.col_values(3)
 
+contents = []
+for content in _contents:
+    if '*' not in content:
+        contents.append(content)
 
 score_list = []
 label_list = []
@@ -127,13 +129,13 @@ POS = 0
 NEG = 0
 
 rates = []
-for i in tqdm(range(0,len(contents))):
+for i in tqdm(range(0,len(_contents))):
     rate = []
     price_list = json.loads(prices[i])
     for idx in range(0,6):
         rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
     rates.append(rate)
-    score_list.append(sentiment_score(contents[i]))
+    score_list.append(sentiment_score(_contents[i]))
 
 # 情感极性与六天内（包括）新闻涨跌比率的相关度
 # fiveday_rate_list = []
@@ -146,7 +148,7 @@ for i in range(0,6):
 
     df = pd.DataFrame(data)
     # print(df)
-    # print(df.corr("kendall"))
+    print(df.corr("kendall"))
 
 
 
@@ -159,10 +161,10 @@ for i in tqdm(range(0,len(contents))):
     if rate>0:
         POS += len(tokens)
         for token in tokens:
-            if 'not' in tokens:
-                token = 'not_'+token
             if len(token) < 3:
                 continue
+            if 'not' in tokens:
+                token = 'not_'+token
             if token in count.keys():
                 count[token]['pos'] += 1
             else:
@@ -171,19 +173,33 @@ for i in tqdm(range(0,len(contents))):
     if rate<0:
         NEG += len(tokens)
         for token in tokens:
-            if 'not' in tokens:
-                token = 'not_'+token
             if len(token) < 3:
                 continue
+            if 'not' in tokens:
+                token = 'not_'+token
             if token in count.keys():
                 count[token]['neg'] += 1
             else:
                 count[token] = {'pos':0,'neg':1} 
 
+# # 云图
+# text = '' 
+# for key,value in count.items():
+#     text += (key+' ') * (value['pos']+value['neg'])
+# wc = WordCloud(
+#     width=1000,
+#     height=600,
+#     max_font_size=100,            #字体大小
+#     min_font_size=10,
+#     collocations=False, 
+#     max_words=1000
+# )
+# wc.generate(text)
+# wc.to_file('jielun2.png')    #图片保存
 
 adj = ['JJ','JJR','JJS','VBG']
 vb = ['VB','VBD','VBG','VBN','VBP','VBZ']
-nn = ['NN','NNS','NNP','NNPS']
+nn = ['NN','NNS']
 
 # freq
 copy = count.copy()
@@ -201,10 +217,10 @@ for word,value in tqdm(copy.items()):
         sent_words.append(word) 
     count[word]['sent'] = value['PD']*value['PD'] * np.sign(value['PD'])
 
+
 # res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
 # res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
 # print(res)
-
 
 feature_words = {}
 sentiment_feature = {}
@@ -213,9 +229,9 @@ for i in tqdm(range(0,len(contents))):
     tokens = review_to_words(contents[i])
     tags = nltk.pos_tag(tokens)
     for word,tag in tags:
-        if tag not in nn or len(word)<3:
+        if tag not in vb+nn or len(word)<3:
             continue
-        word = inf.singularize(word)
+        # word = stem_and_check(word)
         if word not in feature_words.keys():
             feature_words[word] = 1
         else:
@@ -229,8 +245,6 @@ for word,value in tqdm(copy.items()):
         del feature_words[word]
 
 
-import spacy
-nlp = spacy.load('en')
 sf_len = 0
 for i in tqdm(range(0,len(contents))):
     for w in sent_words:
@@ -240,7 +254,7 @@ for i in tqdm(range(0,len(contents))):
         tokens = review_to_words(contents[i])
         for f in tokens:
             if f in feature_words and w in tokens:
-                if abs(tokens.index(w)-tokens.index(f))<5:
+                if abs(tokens.index(w)-tokens.index(f))<3:
                     sf_len += 1
                     if w+'_'+f not in sentiment_feature.keys():
                         if score > 0.01:
@@ -272,13 +286,13 @@ for word,value in tqdm(copy.items()):
 # print(sentiment_feature)
 res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
 # print(res)
-IPython.embed()
-for r in res[:40]:
+
+for r in res[:20]:
     print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
     print(' ')
 print('========================')
 
-for r in res[-40:]:
+for r in res[-20:]:
     print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
     print(' ')
 
