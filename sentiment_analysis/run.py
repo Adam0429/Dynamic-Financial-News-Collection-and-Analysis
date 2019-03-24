@@ -116,7 +116,7 @@ prices = worksheet.col_values(3)
 
 contents = []
 for content in _contents:
-    if '*' not in content:
+    if '*' not in content and content not in contents:
         contents.append(content)
 
 score_list = []
@@ -148,11 +148,9 @@ for i in range(0,6):
 
     df = pd.DataFrame(data)
     # print(df)
-    print(df.corr("kendall"))
+    # print(df.corr("kendall"))
 
 
-
-contents = list(set(contents))
 
 for i in tqdm(range(0,len(contents))):
     tokens = review_to_words(contents[i])
@@ -296,7 +294,7 @@ for r in res[-20:]:
     print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
     print(' ')
 
-
+IPython.embed()
 # for sf,value in sentiment_feature.items():
 #    if value['pos']+value['neg'] > avg_sf:
 #       print(sf,freq)

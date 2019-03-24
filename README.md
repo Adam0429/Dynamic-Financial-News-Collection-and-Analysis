@@ -107,84 +107,84 @@ Yichao Lu, Ruihai Dong, Barry Smyth
 
 情感词库:
 
-serious_policies -1.0 0 3
+arguing_stock -1.0 0 3
 
-blaming_percent -1.0 0 3
+illegal_state -1.0 0 6
 
-blaming_warning -1.0 0 3
+sharp_percent -1.0 0 5
 
-announcing_companies -1.0 0 3
+sharp_reporting -1.0 0 4
 
-serious_address -1.0 0 8
+social_governance -1.0 0 3
 
-serious_called -1.0 0 4
+serious_address -1.0 0 5
 
 serious_bid -1.0 0 4
 
 serious_value -1.0 0 7
 
-renewable_tax -1.0 0 4
+serious_called -1.0 0 4
 
-serious_said -1.0 0 3
+illegal_received -1.0 0 6
 
-single_companies -1.0 0 3
+illegal_government -1.0 0 3
 
-Mexican_control -1.0 0 5
+sharp_contrast -1.0 0 3
 
-serious_see -1.0 0 3
+black_networks -1.0 0 5
 
-serious_proposal -1.0 0 3
+black_programming -1.0 0 5
 
-continuing_euros -1.0 0 4
+tough_providers -1.0 0 3
 
-Cable_providers -0.40810495496362637 1 4
+tough_facing -1.0 0 3
 
-Cable_facing -0.40810495496362637 1 4
+tough_competition -1.0 0 5
 
-serious_take -0.2978788357652759 1 3
+tough_industry -1.0 0 3
 
-commercial_supplier -0.15066206959874162 1 2
+developing_cancer -1.0 0 4
 
-commercial_aerospace -0.15066206959874162 1 2
+illegal_aid -1.0 0 4
 
 ========================
 
-announcing_plan 1.0 4 0
+arguing_hurt 1.0 6 0
 
-continuing_profit 1.0 3 0
+arguing_consumers 1.0 6 0
 
-commercial_businesses 1.0 5 0
+nuclear_plants 1.0 3 0
 
-huge_percent 1.0 3 0
+institutional_pension 1.0 3 0
 
-commercial_leader 1.0 3 0
+social_platforms 1.0 3 0
 
-huge_said 1.0 3 0
+announcing_plan 1.0 3 0
 
-Southern_said 1.0 3 0
+providing_cash 1.0 3 0
 
-single_mid 1.0 5 0
+providing_produce 1.0 3 0
 
-single_revenue 1.0 4 0
+institutional_declined 1.0 4 0
 
-commercial_rules 1.0 3 0
+boosting_percent 1.0 4 0
 
-commercial_relations 1.0 3 0
+Essential_hired 1.0 4 0
 
-commercial_announced 1.0 3 0
+developing_health 1.0 3 0
+
+developing_insurer 1.0 3 0
+
+separate_meetings 1.0 3 0
+
+social_information 1.0 4 0
+
+separate_company 1.0 7 0
+
+soft_supplier 1.0 4 0
+
+soft_smartphones 1.0 4 0
+
+announcing_sale 1.0 5 0
 
 announcing_jumped 1.0 3 0
-
-commercial_maker 1.0 6 0
-
-Belgian_metals 1.0 4 0
-
-commercial_ride 1.0 4 0
-
-commercial_automaker 1.0 3 0
-
-commercial_sharing 1.0 3 0
-
-Mexican_said 1.0 3 0
-
-Belgian_company 1.0 18 0
