@@ -50,14 +50,28 @@ def stem_and_check(word):
     #     return word
     # return suggest_words[0]
 
+def my_read(path):
+    file = open(path)
+    words = []
+    for line in file.readlines():
+        words.append(line.strip())
+    return words
 
-
-# #5.显示图片
-# plt.figure('jielun')   #图片显示的名字
-# plt.imshow(wc)
-# plt.axis('off')        #关闭坐标
-# plt.show()
-
+def output_cloud(count,name):
+    # 云图
+    text = '' 
+    for key,value in count.items():
+        text += (key+' ') * (value)
+    wc = WordCloud(
+        width=1000,
+        height=600,
+        max_font_size=100,            #字体大小
+        min_font_size=10,
+        collocations=False, 
+        max_words=1000
+    )
+    wc.generate(text)
+    wc.to_file(name+'.png')    #图片保存
 
 # sn = SenticNet()
 # concept_info = sn.concept('love')
@@ -83,7 +97,7 @@ def sentiment_score(text):
     # if count == 0: #mid
     #   return -1 
     # return score/count
-    
+
 # test sentiment_score accuracy
 # scores = []
 # workbook = pd.read_csv(u'sentiment.csv',encoding='ISO-8859-1')
@@ -114,48 +128,52 @@ worksheet = workbook.sheet_by_index(0)
 _contents = worksheet.col_values(1)
 prices = worksheet.col_values(3)
 
-contents = []
-for content in _contents:
-    if '*' not in content and content not in contents:
-        contents.append(content)
+# rates = []
+# for i in tqdm(range(0,len(_contents))):
+#     rate = []
+#     price_list = json.loads(prices[i])
+#     for idx in range(0,6):
+#         rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
+#     rates.append(rate)
+#     score_list.append(sentiment_score(_contents[i]))
+
+# # 情感极性与六天内（包括）新闻涨跌比率的相关度
+# # fiveday_rate_list = []
+# for i in range(0,6):
+#     rate = [x[i] for x in rates]
+#     data = {
+#            'scores':score_list,
+#            'rates':rate
+#            }
+
+#     df = pd.DataFrame(data)
+#     # print(df)
+#     # print(df.corr("kendall"))
+
+
+datas = []
+for i in range(0,len(_contents)):
+    if '*' not in _contents[i]:
+        data = {}
+        data['content'] = _contents[i]
+        price_list = json.loads(prices[i])
+        data['rate'] = (price_list[1]-price_list[0])/price_list[0]
+        datas.append(data)
 
 score_list = []
 label_list = []
 
 count = {}
-# neg_words = {}
 
 POS = 0
 NEG = 0
 
-rates = []
-for i in tqdm(range(0,len(_contents))):
-    rate = []
-    price_list = json.loads(prices[i])
-    for idx in range(0,6):
-        rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
-    rates.append(rate)
-    score_list.append(sentiment_score(_contents[i]))
-
-# 情感极性与六天内（包括）新闻涨跌比率的相关度
-# fiveday_rate_list = []
-for i in range(0,6):
-    rate = [x[i] for x in rates]
-    data = {
-           'scores':score_list,
-           'rates':rate
-           }
-
-    df = pd.DataFrame(data)
-    # print(df)
-    # print(df.corr("kendall"))
 
 
 
-for i in tqdm(range(0,len(contents))):
-    tokens = review_to_words(contents[i])
-    price_list = json.loads(prices[i])
-    rate = (price_list[1]-price_list[0])/price_list[0] # 选当天的股票变化判断涨跌，因为相关度当天的最高
+for data in tqdm(datas):
+    tokens = review_to_words(data['content'])
+    rate = data['rate'] # 选当天的股票变化判断涨跌，因为相关度当天的最高
     if rate>0:
         POS += len(tokens)
         for token in tokens:
@@ -180,26 +198,14 @@ for i in tqdm(range(0,len(contents))):
             else:
                 count[token] = {'pos':0,'neg':1} 
 
-# # 云图
-# text = '' 
-# for key,value in count.items():
-#     text += (key+' ') * (value['pos']+value['neg'])
-# wc = WordCloud(
-#     width=1000,
-#     height=600,
-#     max_font_size=100,            #字体大小
-#     min_font_size=10,
-#     collocations=False, 
-#     max_words=1000
-# )
-# wc.generate(text)
-# wc.to_file('jielun2.png')    #图片保存
+
+
 
 adj = ['JJ','JJR','JJS']
 vb = ['VB','VBD','VBG','VBN','VBP','VBZ']
 nn = ['NN','NNS']
 
-# freq
+## freq
 copy = count.copy()
 sent_words = [] # PD>0.3情感值
 
@@ -220,20 +226,43 @@ for word,value in tqdm(copy.items()):
 # res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
 # print(res)
 
-pos_words = []
-neg_words = []
-for word in sent_words:
-    if count[word]['sent'] > 0:
-        pos_words.append(word.lower())
-    else:
-        neg_words.append(word.lower())
+## neg pos 词
+# pos_words = {}
+# neg_words = {}
+# for word in sent_words:
+#     if count[word]['sent'] > 0:
+#         pos_words[word.lower()] = count[word]['pos']+count[word]['neg']
+#     else:
+#         neg_words[word.lower()] = count[word]['pos']+count[word]['neg']
+
+# output_cloud(pos_words,'pos')
+# output_cloud(neg_words,'neg')
+
+## 求于bl词典的覆盖率
+
+# bl_pos = my_read('sentiment_analysis/bl/positive.txt')  # 4783
+# bl_neg = my_read('sentiment_analysis/bl/negative.txt')  # 2006
+
+# pc = 0
+# for word in pos_words:
+#     if word in bl_pos:
+#         pc += 1
+# pos_accuracy = pc/len(pos_words)  # 0.2857142857142857
+
+# nc = 0
+# for word in neg_words:
+#     if word in bl_neg:
+#         nc += 1
+# neg_accuracy = nc/len(neg_words)  # 0.18
+
+
 
 sent_words = [word.lower() for word in sent_words]
 feature_words = {}
 sentiment_feature = {}
 
-for i in tqdm(range(0,len(contents))):
-    tokens = review_to_words(contents[i])
+for data in tqdm(datas):
+    tokens = review_to_words(data['content'])
     tags = nltk.pos_tag(tokens)
     for word,tag in tags:
         if tag not in vb+nn or len(word)<3:
@@ -254,26 +283,26 @@ for word,value in tqdm(copy.items()):
 feature_words = [inf.singularize(word).lower() for word in feature_words.keys()]
 
 sf_len = 0
-for i in tqdm(range(0,len(contents))):
+for data in tqdm(datas):
+    tokens = review_to_words(data['content'])
+    rate = data['rate']
+    tokens = [inf.singularize(token).lower() for token in tokens]
     for w in sent_words:
-        if w not in contents[i]:
+        if w not in tokens:
             continue
-        score = sentiment_score(contents[i])
-        tokens = review_to_words(contents[i])
-        tokens = [inf.singularize(token).lower() for token in tokens]
-        for f in tokens:
-            if f in feature_words and w in tokens:
+        for f in feature_words:
+            if f in tokens and f != w:
                 if abs(tokens.index(w)-tokens.index(f))<3:
                     sf_len += 1
                     if w+'_'+f not in sentiment_feature.keys():
-                        if score > 0.01:
+                        if rate > 0:
                             sentiment_feature[w+'_'+f] = {'pos':1,'neg':0}
-                        if score < -0.01:
+                        if rate < 0:
                             sentiment_feature[w+'_'+f] = {'pos':0,'neg':1}
                     else:
-                        if score > 0.01:
+                        if rate > 0:
                             sentiment_feature[w+'_'+f]['pos'] += 1
-                        if score < -0.01:
+                        if rate < 0:
                             sentiment_feature[w+'_'+f]['neg'] += 1
 
 copy = sentiment_feature.copy()
@@ -281,7 +310,7 @@ copy = sentiment_feature.copy()
 
 
 for word,value in tqdm(copy.items()):
-    if value['pos']+value['neg']<3: #avg_sf
+    if value['pos']+value['neg']<6: #avg_sf
         try:
             del sentiment_feature[word]
         except:
@@ -292,21 +321,55 @@ for word,value in tqdm(copy.items()):
     
     value['PD'] = (pos-neg)/(pos+neg) # polarity difference
     sentiment_feature[word]['sent'] = value['PD'] * value['PD'] * np.sign(value['PD'])
-# print(sentiment_feature)
-res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
-# print(res)
 
-for r in res[:30]:
-    print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
+res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
+
+## company word
+# company_pos = {}
+# company_neg = {}
+# for key,value in sentiment_feature.items():
+#     if 'company' in key:
+#         if sentiment_feature[key]['sent'] > 0:
+#             company_pos[key.split('_')[0]] = sentiment_feature[key]['pos']
+#         else:
+#             company_neg[key.split('_')[0]] = sentiment_feature[key]['neg']
+
+# output_cloud(company_pos,'company_pos')
+# output_cloud(company_neg,'company_neg')
+
+
+# for r in res[:30]:
+#     print(r[0],r[1]['sent'],r[1]['pos']+r[1]['neg'])
+#     print(' ')
+
+# print(' ')
+# print('========================')
+
+# for r in res[-40:]:
+#     print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
+#     print(' ')
+
+pos_res = {}
+for r in res:
+    if r[1]['sent'] == 1.0:
+        pos_res[r[0]] = r[1]['pos']+r[1]['neg']
+pos_res = sorted(pos_res.items(),key=lambda pos_res:pos_res[1],reverse=True)
+for r in pos_res[:20]:
+    print(r[0],'1.0',r[1])
     print(' ')
 
 print(' ')
 print('========================')
+print(' ')
 
-for r in res[-30:]:
-    print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
+neg_res = {}
+for r in res:
+    if r[1]['sent'] == -1.0:
+        neg_res[r[0]] = r[1]['pos']+r[1]['neg']
+neg_res = sorted(neg_res.items(),key=lambda neg_res:neg_res[1],reverse=True)
+for r in neg_res[:20]:
+    print(r[0],'-1.0',r[1])
     print(' ')
-
 IPython.embed()
 # for sf,value in sentiment_feature.items():
 #    if value['pos']+value['neg'] > avg_sf:

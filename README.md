@@ -107,125 +107,85 @@ Yichao Lu, Ruihai Dong, Barry Smyth
 
 情感词库:
 
-worst_day -1.0 0 6
+stronger_investor 1.0 54
 
-worst_year -1.0 0 6
+sharp_maker 1.0 20
 
-illegal_state -1.0 0 6
+stronger_inflation 1.0 19
 
-sharp_percent -1.0 0 5
+big_season 1.0 19
 
-sharp_reporting -1.0 0 4
+stronger_shrugged 1.0 18
 
-worst_percent -1.0 0 3
+sharp_bank 1.0 18
 
-worst_suffered -1.0 0 4
+strong_company 1.0 15
 
-social_governance -1.0 0 3
+western_stock 1.0 14
 
-major_ga -1.0 0 5
+western_target 1.0 14
 
-illegal_received -1.0 0 6
+optimistic_analyst 1.0 12
 
-illegal_government -1.0 0 3
+electric_business 1.0 10
 
-sharp_contrast -1.0 0 3
+speculative_report 1.0 10
 
-difficult_make -1.0 0 3
+big_sale 1.0 10
 
-black_network -1.0 0 5
+optimistic_forecast 1.0 10
 
-black_programming -1.0 0 5
+big_product 1.0 10
 
-troubled_pipeline -1.0 0 3
+big_firm 1.0 10
 
-troubled_expansion -1.0 0 3
+broad_index 1.0 10
 
-troubled_billion -1.0 0 3
+foreign_tax 1.0 10
 
-tough_provider -1.0 0 3
+lower_bond 1.0 10
 
-tough_facing -1.0 0 3
-
-tough_competition -1.0 0 5
-
-tough_industry -1.0 0 3
-
-illegal_billion -1.0 0 3
-
-major_economy -1.0 0 3
-
-illegal_aid -1.0 0 4
-
-organic_sale -1.0 0 3
-
-sharp_drop -0.5501693380477118 1 6
-
-extra_million -0.4046193381680032 1 4
-
-major_business -0.4046193381680032 1 4
-
-tough_face -0.2943508006148632 1 3
+lower_expense 1.0 10
 
 
 ========================
 
-major_restructuring 1.0 3 0
+lower_source -1.0 20
 
-major_automaker 1.0 5 0
+lower_maker -1.0 16
 
-social_platform 1.0 4 0
+volatile_market -1.0 15
 
-major_representing 1.0 4 0
+electric_automaker -1.0 14
 
-major_tech 1.0 4 0
+lower_year -1.0 14
 
-whole_lot 1.0 3 0
+single_company -1.0 12
 
-major_chipmaker 1.0 3 0
+arconic_share -1.0 12
 
-regular_percent 1.0 8 0
+arconic_said -1.0 12
 
-regular_close 1.0 4 0
+underscored_smartphone -1.0 12
 
-regular_trading 1.0 4 0
+interactive_software -1.0 12
 
-institutional_declined 1.0 4 0
+public_deal -1.0 10
 
-great_citing 1.0 3 0
+weak_maker -1.0 10
 
-great_good 1.0 4 0
+crucial_quarter -1.0 10
 
-great_iphone 1.0 4 0
+lower_insurer -1.0 10
 
-major_expectation 1.0 3 0
+electric_stock -1.0 10
 
-whole_bank 1.0 3 0
+lower_told -1.0 10
 
-electronic_simplified 1.0 14 0
+soft_supplier -1.0 10
 
-separate_meeting 1.0 3 0
+lower_end -1.0 9
 
-major_moved 1.0 3 0
+popular_company -1.0 9
 
-separate_company 1.0 8 0
-
-major_administration 1.0 4 0
-
-major_took 1.0 3 0
-
-major_issue 1.0 3 0
-
-social_information 1.0 4 0
-
-soft_supplier 1.0 4 0
-
-external_finance 1.0 3 0
-
-major_airline 1.0 3 0
-
-optimistic_analyst 1.0 4 0
-
-optimistic_subscriber 1.0 4 0
-
-renewable_network 1.0 10 0
+broad_share -1.0 9
