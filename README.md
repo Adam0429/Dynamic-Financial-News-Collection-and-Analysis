@@ -107,7 +107,9 @@ Yichao Lu, Ruihai Dong, Barry Smyth
 
 情感词库:
 
-arguing_stock -1.0 0 3
+worst_day -1.0 0 6
+
+worst_year -1.0 0 6
 
 illegal_state -1.0 0 6
 
@@ -115,15 +117,13 @@ sharp_percent -1.0 0 5
 
 sharp_reporting -1.0 0 4
 
+worst_percent -1.0 0 3
+
+worst_suffered -1.0 0 4
+
 social_governance -1.0 0 3
 
-serious_address -1.0 0 5
-
-serious_bid -1.0 0 4
-
-serious_value -1.0 0 7
-
-serious_called -1.0 0 4
+major_ga -1.0 0 5
 
 illegal_received -1.0 0 6
 
@@ -131,11 +131,19 @@ illegal_government -1.0 0 3
 
 sharp_contrast -1.0 0 3
 
-black_networks -1.0 0 5
+difficult_make -1.0 0 3
+
+black_network -1.0 0 5
 
 black_programming -1.0 0 5
 
-tough_providers -1.0 0 3
+troubled_pipeline -1.0 0 3
+
+troubled_expansion -1.0 0 3
+
+troubled_billion -1.0 0 3
+
+tough_provider -1.0 0 3
 
 tough_facing -1.0 0 3
 
@@ -143,48 +151,81 @@ tough_competition -1.0 0 5
 
 tough_industry -1.0 0 3
 
-developing_cancer -1.0 0 4
+illegal_billion -1.0 0 3
+
+major_economy -1.0 0 3
 
 illegal_aid -1.0 0 4
 
+organic_sale -1.0 0 3
+
+sharp_drop -0.5501693380477118 1 6
+
+extra_million -0.4046193381680032 1 4
+
+major_business -0.4046193381680032 1 4
+
+tough_face -0.2943508006148632 1 3
+
+
 ========================
 
-arguing_hurt 1.0 6 0
+major_restructuring 1.0 3 0
 
-arguing_consumers 1.0 6 0
+major_automaker 1.0 5 0
 
-nuclear_plants 1.0 3 0
+social_platform 1.0 4 0
 
-institutional_pension 1.0 3 0
+major_representing 1.0 4 0
 
-social_platforms 1.0 3 0
+major_tech 1.0 4 0
 
-announcing_plan 1.0 3 0
+whole_lot 1.0 3 0
 
-providing_cash 1.0 3 0
+major_chipmaker 1.0 3 0
 
-providing_produce 1.0 3 0
+regular_percent 1.0 8 0
+
+regular_close 1.0 4 0
+
+regular_trading 1.0 4 0
 
 institutional_declined 1.0 4 0
 
-boosting_percent 1.0 4 0
+great_citing 1.0 3 0
 
-Essential_hired 1.0 4 0
+great_good 1.0 4 0
 
-developing_health 1.0 3 0
+great_iphone 1.0 4 0
 
-developing_insurer 1.0 3 0
+major_expectation 1.0 3 0
 
-separate_meetings 1.0 3 0
+whole_bank 1.0 3 0
+
+electronic_simplified 1.0 14 0
+
+separate_meeting 1.0 3 0
+
+major_moved 1.0 3 0
+
+separate_company 1.0 8 0
+
+major_administration 1.0 4 0
+
+major_took 1.0 3 0
+
+major_issue 1.0 3 0
 
 social_information 1.0 4 0
 
-separate_company 1.0 7 0
-
 soft_supplier 1.0 4 0
 
-soft_smartphones 1.0 4 0
+external_finance 1.0 3 0
 
-announcing_sale 1.0 5 0
+major_airline 1.0 3 0
 
-announcing_jumped 1.0 3 0
+optimistic_analyst 1.0 4 0
+
+optimistic_subscriber 1.0 4 0
+
+renewable_network 1.0 10 0

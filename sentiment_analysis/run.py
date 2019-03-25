@@ -195,7 +195,7 @@ for i in tqdm(range(0,len(contents))):
 # wc.generate(text)
 # wc.to_file('jielun2.png')    #图片保存
 
-adj = ['JJ','JJR','JJS','VBG']
+adj = ['JJ','JJR','JJS']
 vb = ['VB','VBD','VBG','VBN','VBP','VBZ']
 nn = ['NN','NNS']
 
@@ -204,22 +204,31 @@ copy = count.copy()
 sent_words = [] # PD>0.3情感值
 
 for word,value in tqdm(copy.items()):
-    if value['pos']+value['neg']<20:
+    if value['pos']+value['neg']<10:
         del count[word]
         continue
     pos = value['pos']/POS
     neg = value['neg']/NEG
-    
+    # if value == 'According':
+    #     IPython.embed()
     value['PD'] = (pos-neg)/(pos+neg) # polarity difference
-    if abs(value['PD']) > 0.3 and nltk.pos_tag([word])[0][1] in adj:
-        sent_words.append(word) 
+    if abs(value['PD']) > 0.3 and nltk.pos_tag([word])[0][1] in adj:  
+        sent_words.append(word)
     count[word]['sent'] = value['PD']*value['PD'] * np.sign(value['PD'])
-
-
+# res = sorted(sent_words.items(),key=lambda sent_words:sent_words[1],reverse=False)
 # res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
 # res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
 # print(res)
 
+pos_words = []
+neg_words = []
+for word in sent_words:
+    if count[word]['sent'] > 0:
+        pos_words.append(word.lower())
+    else:
+        neg_words.append(word.lower())
+
+sent_words = [word.lower() for word in sent_words]
 feature_words = {}
 sentiment_feature = {}
 
@@ -242,6 +251,7 @@ for word,value in tqdm(copy.items()):
     if value<avg_f:
         del feature_words[word]
 
+feature_words = [inf.singularize(word).lower() for word in feature_words.keys()]
 
 sf_len = 0
 for i in tqdm(range(0,len(contents))):
@@ -250,6 +260,7 @@ for i in tqdm(range(0,len(contents))):
             continue
         score = sentiment_score(contents[i])
         tokens = review_to_words(contents[i])
+        tokens = [inf.singularize(token).lower() for token in tokens]
         for f in tokens:
             if f in feature_words and w in tokens:
                 if abs(tokens.index(w)-tokens.index(f))<3:
@@ -285,12 +296,14 @@ for word,value in tqdm(copy.items()):
 res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
 # print(res)
 
-for r in res[:20]:
+for r in res[:30]:
     print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
     print(' ')
+
+print(' ')
 print('========================')
 
-for r in res[-20:]:
+for r in res[-30:]:
     print(r[0],r[1]['sent'],r[1]['pos'],r[1]['neg'])
     print(' ')
 
