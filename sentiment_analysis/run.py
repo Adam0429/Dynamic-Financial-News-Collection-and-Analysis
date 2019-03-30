@@ -134,6 +134,7 @@ _contents = worksheet.col_values(1)
 prices = worksheet.col_values(3)
 
 # rates = []
+# score_list = []
 # for i in tqdm(range(0,len(_contents))):
 #    rate = []
 #    price_list = json.loads(prices[i])
@@ -168,21 +169,23 @@ for i in tqdm(range(0,len(_contents))):
         datas.append(data)
 
 
-score_list = []
-label_list = []
-
 count = {}
 
 POS = 0
 NEG = 0
 
+pos_count = 0
+neg_count = 0
 
+N = 0 #len of tokens
 
 
 for data in tqdm(datas):
     tokens = data['tokens']
+    N += len(tokens)
     rate = data['rate'] # 选当天的股票变化判断涨跌，因为相关度当天的最高
     if rate>0:
+        pos_count += 1
         POS += len(tokens)
         for token in tokens:
             if len(token) < 3:
@@ -195,6 +198,7 @@ for data in tqdm(datas):
                 count[token] = {'pos':1,'neg':0} 
 
     if rate<0:
+        neg_count += 1
         NEG += len(tokens)
         for token in tokens:
             if len(token) < 3:
@@ -213,19 +217,39 @@ for data in tqdm(datas):
 copy = count.copy()
 sent_words = [] # PD>0.3情感值
 
-# DS sent
+freq_pos = pos_count/len(datas) 
+freq_neg = neg_count/len(datas)
+
+# DS sent and PMI sent
 for word,value in tqdm(copy.items()):
     if value['pos']+value['neg']<10:
         del count[word]
         continue
-    pos = value['pos']/POS
-    neg = value['neg']/NEG
-    # if value == 'According':
-    #    IPython.embed()
+    pos = value['pos']/len(datas)
+    neg = value['neg']/len(datas)
+
+
+    freq_w_pos = value['pos']/len(datas)
+    freq_w_neg = value['neg']/len(datas)
+    freq_w = (value['pos']+value['neg'])/len(datas)
+
+    if freq_w_pos*N == 0:
+        PMI_w_pos = 0
+    else:
+        PMI_w_pos = np.log2(freq_w_pos*N/freq_w*freq_pos)
+    if freq_w_neg*N == 0:
+        PMI_w_neg = 0
+    else:
+        PMI_w_neg = np.log2(freq_w_neg*N/freq_w*freq_neg)
+    count[word]['PMI_sent'] = PMI_w_pos - PMI_w_neg
+
     value['PD'] = (pos-neg)/(pos+neg) # polarity difference
     if abs(value['PD']) > 0.3 and nltk.pos_tag([word])[0][1] in adj+adv:  
         sent_words.append(word)
     count[word]['sent'] = value['PD']*value['PD'] * np.sign(value['PD'])
+
+
+
 # res = sorted(sent_words.items(),key=lambda sent_words:sent_words[1],reverse=False)
 # res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
 # res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
@@ -297,42 +321,49 @@ for data in tqdm(datas):
     tokens = data['tokens']
     rate = data['rate']
     tokens = [inf.singularize(token).lower() for token in tokens]
+    token_dict = {}
+    for token in data['tokens']:
+        token_dict[inf.singularize(token).lower()] = token
+
+    
     for w in sent_words:
         if w not in tokens:
             continue
         for f in feature_words:
             if f in tokens and f != w:
-                if abs(tokens.index(w)-tokens.index(f))<3:
+                if abs(tokens.index(w)-tokens.index(f))<3 and ',' not in data['content'][min(data['content'].index(token_dict[f]),data['content'].index(token_dict[w])):max(data['content'].index(token_dict[f]),data['content'].index(token_dict[w]))]:
                     sf_len += 1
-                    if w+'_'+f not in sentiment_feature.keys():
+                    if f not in sentiment_feature.keys():
+                        sentiment_feature[f] = {}
                         if rate > 0:
-                            sentiment_feature[w+'_'+f] = {'pos':1,'neg':0}
+                            sentiment_feature[f][w] = {'pos':1,'neg':0}
                         if rate < 0:
-                            sentiment_feature[w+'_'+f] = {'pos':0,'neg':1}
+                            sentiment_feature[f][w] = {'pos':0,'neg':1}
                     else:
+                        if w not in sentiment_feature[f].keys():
+                            sentiment_feature[f][w] = {'pos':0,'neg':0}
                         if rate > 0:
-                            sentiment_feature[w+'_'+f]['pos'] += 1
+                            sentiment_feature[f][w]['pos'] += 1
                         if rate < 0:
-                            sentiment_feature[w+'_'+f]['neg'] += 1
+                            sentiment_feature[f][w]['neg'] += 1
 
-copy = sentiment_feature.copy()
 # avg_sf = sf_len/len(sentiment_feature.keys())
+# copy = sentiment_feature.copy()
 
+for f,v in tqdm(sentiment_feature.items()):
+    for w,value in v.items():
+        if value['pos']+value['neg']<1: #avg_sf
+            # print(f,w,value)
+            # del sentiment_feature[f][w]
+            sentiment_feature[f][w]['sent'] = 0
+            continue
+        pos = value['pos']/POS
+        neg = value['neg']/NEG
+        
+        value['PD'] = (pos-neg)/(pos+neg) # polarity difference
+        sentiment_feature[f][w]['sent'] = value['PD'] * value['PD'] * np.sign(value['PD'])
 
-for word,value in tqdm(copy.items()):
-    if value['pos']+value['neg']<6: #avg_sf
-        try:
-            del sentiment_feature[word]
-        except:
-            pass
-        continue
-    pos = value['pos']/POS
-    neg = value['neg']/NEG
-    
-    value['PD'] = (pos-neg)/(pos+neg) # polarity difference
-    sentiment_feature[word]['sent'] = value['PD'] * value['PD'] * np.sign(value['PD'])
-
-res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
+# res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
 
 ## company word
 # company_pos = {}
@@ -385,22 +416,43 @@ res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_fe
 #    if value['pos']+value['neg'] > avg_sf:
 #       print(sf,freq)
 
-IPython.embed()
 # Predict
 # content to vector
 
 for data in tqdm(datas):
     idx = datas.index(data)
     tags = data['tags']
+    tokens = data['tokens']
     datas[idx]['DsVector'] = [0,0,0,0]
     datas[idx]['SnVector'] = [0,0,0,0]
     datas[idx]['BlVector'] = [0,0,0,0]
+    datas[idx]['PmiVector'] = [0,0,0,0]
+    datas[idx]['ContextVector'] = [0,0,0,0]
+
+
+    for f in [token for token in tokens if token in sentiment_feature.keys()]:
+        for w in sentiment_feature[f].keys():
+            if w in tokens:
+                if abs(tokens.index(f)-tokens.index(w))<3 and ',' not in data['content'][min(data['content'].index(f),data['content'].index(w)):max(data['content'].index(f),data['content'].index(w))]:
+                    if tags[tokens.index(f)][1] in adj:
+                        if f in count.keys():
+                            datas[idx]['ContextVector'][0] += count[f]['sent']
+                    elif tags[tokens.index(f)][1] in adv:
+                        if f in count.keys():
+                            datas[idx]['ContextVector'][1] += count[f]['sent']
+                    if tags[tokens.index(w)][1] in nn:
+                        if w in count.keys():
+                            datas[idx]['ContextVector'][2] = count[w]['sent']
+                    elif tags[tokens.index(w)][1] in vb:
+                        if w in count.keys():
+                            datas[idx]['ContextVector'][3] = count[w]['sent']
+                    # print(sentiment_feature[f][w]['sent'])
+
     for word,tag in tags:
-        if word in bl.keys():
-            print(word)
         if tag in adj:
             if word in count.keys():
                 datas[idx]['DsVector'][0] += count[word]['sent']
+                datas[idx]['PmiVector'][0] += count[word]['PMI_sent']
             if word in sn.data.keys():
                 datas[idx]['SnVector'][0] += float(sn.polarity_intense(word))
             if word in bl_sent.keys():
@@ -408,6 +460,7 @@ for data in tqdm(datas):
         elif tag in adv:
             if word in count.keys():
                 datas[idx]['SnVector'][1] += count[word]['sent']
+                datas[idx]['PmiVector'][1] += count[word]['PMI_sent']
             if word in sn.data.keys():
                 datas[idx]['SnVector'][1] += float(sn.polarity_intense(word))
             if word in bl_sent.keys():
@@ -415,6 +468,7 @@ for data in tqdm(datas):
         elif tag in nn:
             if word in count.keys():
                 datas[idx]['DsVector'][2] = count[word]['sent']
+                datas[idx]['PmiVector'][2] += count[word]['PMI_sent']
             if word in sn.data.keys():
                 datas[idx]['SnVector'][2] += float(sn.polarity_intense(word))
             if word in bl_sent.keys():
@@ -422,6 +476,7 @@ for data in tqdm(datas):
         elif tag in vb:
             if word in count.keys():
                 datas[idx]['DsVector'][3] = count[word]['sent']
+                datas[idx]['PmiVector'][3] += count[word]['PMI_sent']
             if word in sn.data.keys():
                 datas[idx]['SnVector'][3] += float(sn.polarity_intense(word))
             if word in bl_sent.keys():
@@ -431,13 +486,16 @@ for data in tqdm(datas):
 from sklearn.naive_bayes import GaussianNB
 from sklearn import model_selection
 from sklearn.model_selection import KFold
+from keras.utils import to_categorical
 
 X = [data['DsVector'] for data in datas]
 X = [data['SnVector'] for data in datas]
 X = [data['BlVector'] for data in datas]
+X = [data['PmiVector'] for data in datas]
+X = [data['ContextVector'] for data in datas]
 Y = [np.sign(data['rate']) for data in datas]
 
-# x_train,x_test,y_train,y_test = model_selection.train_test_split(X,Y,test_size=0.1,shuffle=True)
+x_train,x_test,y_train,y_test = model_selection.train_test_split(X,Y,test_size=0.1,shuffle=True)
 # clf = GaussianNB()
 # clf.fit(np.array(x_train), np.array(y_train))
 # print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
@@ -465,6 +523,38 @@ for train_index, test_index in kf.split(X):
     scores += clf.score(test_x, test_y)
     print('准确率：',clf.score(test_x, test_y))  # 计算测试集的度量值（准确率）
 print('平均准确率：',scores/10)
+
+IPython.embed()
+
+## dnn
+# from keras.models import Sequential
+# from keras.layers import Dense, Activation, Dropout
+# from keras.utils import to_categorical
+
+# x_train,x_test,y_train,y_test = model_selection.train_test_split(X,Y,test_size=0.1,shuffle=True)
+
+# num_classes = 2
+# x_train = np.array(x_train)
+# y_train = np.array(y_train)
+# x_test = np.array(x_test)
+# y_test = np.array(y_test)
+
+# y_train = to_categorical(y_train,num_classes=2)
+# y_test = to_categorical(y_test,num_classes=2)
+
+# nmodel = Sequential()
+# nmodel.add(Dense(units=num_classes, activation = 'relu', input_dim = x_train.shape[1]))
+# nmodel.add(Dropout(0.5))
+# nmodel.add(Dense(2, activation = 'relu'))
+# nmodel.add(Dropout(0.5))
+# # dropout:https://blog.csdn.net/program_developer/article/details/80737724
+# nmodel.add(Dense(2, activation = 'softmax'))
+# nmodel.compile(loss = 'categorical_crossentropy',
+#                optimizer = 'adam',
+#                metrics = ['accuracy'])
+# nmodel.fit(x_train,y_train,epochs=10, batch_size=5)
+# nmodel.evaluate(x_test,y_test, batch_size=5)
+
 
 # sheet = workbook.sheet_by_index(1)
 # labels = sheet.col_values(0)
