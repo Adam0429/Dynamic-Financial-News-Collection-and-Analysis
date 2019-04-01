@@ -168,6 +168,8 @@ for i in tqdm(range(0,len(_contents))):
         data['rate'] = (price_list[1]-price_list[0])/price_list[0]
         datas.append(data)
 
+# datas = datas[:17687]
+# datas = datas[-2000:]
 
 count = {}
 
@@ -180,7 +182,7 @@ neg_count = 0
 N = 0 #len of tokens
 
 
-for data in tqdm(datas):
+for data in tqdm(datas): # datas[:17687]
     tokens = data['tokens']
     N += len(tokens)
     rate = data['rate'] # 选当天的股票变化判断涨跌，因为相关度当天的最高
@@ -486,21 +488,36 @@ for data in tqdm(datas):
 from sklearn.naive_bayes import GaussianNB
 from sklearn import model_selection
 from sklearn.model_selection import KFold
+from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import f1_score
 from keras.utils import to_categorical
 
 X = [data['DsVector'] for data in datas]
-X = [data['SnVector'] for data in datas]
-X = [data['BlVector'] for data in datas]
-X = [data['PmiVector'] for data in datas]
-X = [data['ContextVector'] for data in datas]
+# X = [data['SnVector'] for data in datas]
+# X = [data['BlVector'] for data in datas]
+# X = [data['PmiVector'] for data in datas]
+# X = [data['ContextVector'] for data in datas]
 Y = [np.sign(data['rate']) for data in datas]
 
-x_train,x_test,y_train,y_test = model_selection.train_test_split(X,Y,test_size=0.1,shuffle=True)
-# clf = GaussianNB()
-# clf.fit(np.array(x_train), np.array(y_train))
-# print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
+# print(len(X)-X.count([0,0,0,0])) 403
+# x_train,x_test,y_train,y_test = model_selection.train_test_split(X,Y,test_size=0.1,shuffle=True)
+x_train = X[:17687]
+y_train = Y[:17687]
+x_test = X[-1000:]
+y_test = Y[-1000:] #不用测试数据训练情感词典
+clf = GaussianNB()
+clf.fit(np.array(x_train), np.array(y_train))
+print('准确率：',clf.score(np.array(x_test), np.array(y_test))) 
+print('召回率：',recall_score(y_test,clf.predict(x_test),average = 'macro'))
+print('精确率：',precision_score(y_test, clf.predict(x_test), average='macro'))
 
-scores = 0
+IPython.embed()
+
+accuracy_scores = 0
+recall_scores = 0
+precision_scores = 0
+f1_scores = 0
 kf = KFold(n_splits=10,shuffle=True)
 for train_index, test_index in kf.split(X):
     train_x = []
@@ -520,11 +537,23 @@ for train_index, test_index in kf.split(X):
     test_y = np.array(test_y)
     clf = GaussianNB()
     clf.fit(X, Y)
-    scores += clf.score(test_x, test_y)
-    print('准确率：',clf.score(test_x, test_y))  # 计算测试集的度量值（准确率）
-print('平均准确率：',scores/10)
+    predict_y = clf.predict(test_x)
+    accuracy = clf.score(test_x, test_y)
+    accuracy_scores += accuracy
+    recall = recall_score(test_y,predict_y,average = 'macro')
+    recall_scores += recall
+    precision = precision_score(test_y, predict_y, average='macro')
+    precision_scores += precision
+    f1 = f1_score(test_y,predict_y,average = 'macro')
+    f1_scores += f1
 
-IPython.embed()
+print('平均准确率：',accuracy_scores/10)
+print('平均召回率：',recall_scores/10)
+print('平均精确率：',precision_scores/10)
+print('平均F-measure：',f1_scores/10)
+
+
+
 
 ## dnn
 # from keras.models import Sequential
