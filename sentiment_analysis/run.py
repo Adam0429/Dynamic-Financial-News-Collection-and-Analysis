@@ -12,6 +12,7 @@ from nltk.corpus import stopwords
 import json
 import inflection as inf
 from wordcloud import WordCloud
+from gensim.models import Word2Vec
 import enchant
 # import matplotlib.pyplot as plt
 
@@ -131,8 +132,8 @@ path = r'data/labeled_data.xls'
 workbook = xlrd.open_workbook(path)
 worksheet = workbook.sheet_by_index(0)
 _contents = worksheet.col_values(1)
+companies = worksheet.col_values(2)
 prices = worksheet.col_values(3)
-
 # rates = []
 # score_list = []
 # for i in tqdm(range(0,len(_contents))):
@@ -160,10 +161,13 @@ prices = worksheet.col_values(3)
 datas = []
 for i in tqdm(range(0,len(_contents))):
     if '*' not in _contents[i]:
+        # if companies[i] != 'Apple Inc.':
+        #     continue
         data = {}
         data['content'] = _contents[i]
         data['tokens'] = review_to_words(data['content'])
         data['tags'] = nltk.pos_tag(data['tokens'])
+        data['company'] = companies[i]
         price_list = json.loads(prices[i])
         data['rate'] = (price_list[1]-price_list[0])/price_list[0]
         datas.append(data)
@@ -301,7 +305,7 @@ for data in tqdm(datas):
     tokens = data['tokens']
     tags = data['tags']
     for word,tag in tags:
-        if tag not in vb+nn or len(word)<3:
+        if tag not in nn or len(word)<3: # vb+nn
             continue
         # word = stem_and_check(word)
         if word not in feature_words.keys():
@@ -354,7 +358,7 @@ for data in tqdm(datas):
 
 for f,v in tqdm(sentiment_feature.items()):
     for w,value in v.items():
-        if value['pos']+value['neg']<1: #avg_sf
+        if value['pos']+value['neg']<2: #avg_sf
             # print(f,w,value)
             # del sentiment_feature[f][w]
             sentiment_feature[f][w]['sent'] = 0
@@ -466,7 +470,7 @@ for data in tqdm(datas):
             if word in sn.data.keys():
                 datas[idx]['SnVector'][1] += float(sn.polarity_intense(word))
             if word in bl_sent.keys():
-                datas[idx]['BlVector'][0] += bl_sent[word]  
+                datas[idx]['BlVector'][1] += bl_sent[word]  
         elif tag in nn:
             if word in count.keys():
                 datas[idx]['DsVector'][2] = count[word]['sent']
@@ -474,7 +478,7 @@ for data in tqdm(datas):
             if word in sn.data.keys():
                 datas[idx]['SnVector'][2] += float(sn.polarity_intense(word))
             if word in bl_sent.keys():
-                datas[idx]['BlVector'][0] += bl_sent[word]
+                datas[idx]['BlVector'][2] += bl_sent[word]
         elif tag in vb:
             if word in count.keys():
                 datas[idx]['DsVector'][3] = count[word]['sent']
@@ -482,7 +486,7 @@ for data in tqdm(datas):
             if word in sn.data.keys():
                 datas[idx]['SnVector'][3] += float(sn.polarity_intense(word))
             if word in bl_sent.keys():
-                datas[idx]['BlVector'][0] += bl_sent[word]
+                datas[idx]['BlVector'][3] += bl_sent[word]
     # datas[idx]['DsVector'] = [adv_score,adv_score,noun_score,verb_score]
 
 from sklearn.naive_bayes import GaussianNB
@@ -491,6 +495,7 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import f1_score
+from sklearn.ensemble import RandomForestClassifier
 from keras.utils import to_categorical
 
 X = [data['DsVector'] for data in datas]
@@ -502,17 +507,17 @@ Y = [np.sign(data['rate']) for data in datas]
 
 # print(len(X)-X.count([0,0,0,0])) 403
 # x_train,x_test,y_train,y_test = model_selection.train_test_split(X,Y,test_size=0.1,shuffle=True)
-x_train = X[:17687]
-y_train = Y[:17687]
-x_test = X[-1000:]
-y_test = Y[-1000:] #不用测试数据训练情感词典
-clf = GaussianNB()
-clf.fit(np.array(x_train), np.array(y_train))
-print('准确率：',clf.score(np.array(x_test), np.array(y_test))) 
-print('召回率：',recall_score(y_test,clf.predict(x_test),average = 'macro'))
-print('精确率：',precision_score(y_test, clf.predict(x_test), average='macro'))
+# x_train = X[:17687]
+# y_train = Y[:17687]
+# x_test = X[-1000:]
+# y_test = Y[-1000:] #不用测试数据训练情感词典
+# clf = GaussianNB()
+# clf.fit(np.array(x_train), np.array(y_train))
+# print('准确率：',clf.score(np.array(x_test), np.array(y_test))) 
+# print('召回率：',recall_score(y_test,clf.predict(x_test),average = 'macro'))
+# print('精确率：',precision_score(y_test, clf.predict(x_test), average='macro'))
 
-IPython.embed()
+# IPython.embed()
 
 accuracy_scores = 0
 recall_scores = 0
@@ -536,6 +541,7 @@ for train_index, test_index in kf.split(X):
     test_x = np.array(test_x)
     test_y = np.array(test_y)
     clf = GaussianNB()
+    clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
     clf.fit(X, Y)
     predict_y = clf.predict(test_x)
     accuracy = clf.score(test_x, test_y)
@@ -547,12 +553,25 @@ for train_index, test_index in kf.split(X):
     f1 = f1_score(test_y,predict_y,average = 'macro')
     f1_scores += f1
 
-print('平均准确率：',accuracy_scores/10)
-print('平均召回率：',recall_scores/10)
-print('平均精确率：',precision_scores/10)
-print('平均F-measure：',f1_scores/10)
+print('准确率：',accuracy_scores/10)
+print('召回率：',recall_scores/10)
+print('精确率：',precision_scores/10)
+print('F-measure：',f1_scores/10)
 
+IPython.embed()
 
+## 聚类
+from sklearn.cluster import KMeans
+model = Word2Vec(sentences = [data['tokens'] for data in datas],min_count = 2)
+vectors = {}
+for v in model.wv.vocab.keys():
+    if v in feature_words and len(v)>2:
+        vectors[v] = model[v]
+labels = KMeans(n_clusters=10, random_state=9).fit_predict([vector for vector in vectors.values()])
+
+for i in range(0,len(labels)):
+    if labels[i] == 2:
+        print(list(vectors.keys())[i])
 
 
 ## dnn
