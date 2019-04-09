@@ -225,7 +225,7 @@ for data in tqdm(datas): # datas[:17687]
                 token = 'not_'+token
             if token in count.keys():
                 count[token]['neg'] += 1
-                count[token]['neg'] -= rate
+                count[token]['neg_rate'] -= rate
             else:
                 count[token] = {'pos':0,'neg':1,'pos_rate':0,'neg_rate':-rate}
 
@@ -333,7 +333,7 @@ avg_f = sum([item[1] for item in feature_words.items()])/len(feature_words.keys(
 copy = feature_words.copy()
 
 for word,value in tqdm(copy.items()):
-    if value<avg_f:
+    if value<avg_f+50:
         del feature_words[word]
 
 feature_words = [inf.singularize(word).lower() for word in feature_words.keys()]
@@ -517,6 +517,7 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import f1_score
+from sklearn.metrics import mean_absolute_error
 from sklearn.ensemble import RandomForestClassifier
 from keras.utils import to_categorical
 import matplotlib.pyplot as plt
@@ -526,71 +527,77 @@ X = [data['DsVector'] for data in datas]
 # X = [data['BlVector'] for data in datas]
 # X = [data['PmiVector'] for data in datas]
 # X = [data['ContextVector'] for data in datas]
+X = [data['DsVector_rate'] for data in datas]
 Y = [np.sign(data['rate']) for data in datas]
 Y = [data['rate'] for data in datas]
 
 # print(len(X)-X.count([0,0,0,0])) 403
-# x_train,x_test,y_train,y_test = model_selection.train_test_split(X,Y,test_size=0.1,shuffle=True)
+train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
 # # x_train = X[:2500]
 # # y_train = Y[:2500]
 # # x_test = X[-300:]
 # # y_test = Y[-300:]
-# clf = GaussianNB()
-# clf.fit(np.array(x_train), np.array(y_train))
-# print('准确率：',clf.score(np.array(x_test), np.array(y_test))) 
-# print('召回率：',recall_score(y_test,clf.predict(x_test),average = 'macro'))
-# print('精确率：',precision_score(y_test, clf.predict(x_test), average='macro'))
+clf = GaussianNB()
+clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+# print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
+# print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+# print('精确率：',precision_score(test_y, clf.predict(test_x), average='macro'))
+# print('MAE：',mean_absolute_error(test_y, predict_y))
 
 
-accuracy_scores = 0
-recall_scores = 0
-precision_scores = 0
-f1_scores = 0
-kf = KFold(n_splits=10,shuffle=False)
-for train_index, test_index in kf.split(X):
-    train_x = []
-    train_y = []
-    test_x = []
-    test_y = []
-    for index in train_index:
-        train_x.append(X[index])
-        train_y.append(Y[index])
-    for index in test_index:
-        test_x.append(X[index])
-        test_y.append(Y[index])
+# accuracy_scores = 0
+# recall_scores = 0
+# precision_scores = 0
+# f1_scores = 0
+# kf = KFold(n_splits=10,shuffle=False)
+# for train_index, test_index in kf.split(X):
+#     train_x = []
+#     train_y = []
+#     test_x = []
+#     test_y = []
+#     for index in train_index:
+#         train_x.append(X[index])
+#         train_y.append(Y[index])
+#     for index in test_index:
+#         test_x.append(X[index])
+#         test_y.append(Y[index])
 
-    train_x = np.array(train_x)
-    train_y = np.array(train_y)
-    test_x = np.array(test_x)
-    test_y = np.array(test_y)
-    clf = GaussianNB()
-    clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
-    clf = LinearRegression()
-    clf.fit(train_x, train_y)
-    predict_y = clf.predict(test_x)
-    # accuracy = clf.score(test_x, test_y)
-    # accuracy_scores += accuracy
-    # recall = recall_score(test_y,predict_y,average = 'macro')
-    # recall_scores += recall
-    # precision = precision_score(test_y, predict_y, average='macro')
-    # precision_scores += precision
-    # f1 = f1_score(test_y,predict_y,average = 'macro')
-    # f1_scores += f1
+#     train_x = np.array(train_x)
+#     train_y = np.array(train_y)
+#     test_x = np.array(test_x)
+#     test_y = np.array(test_y)
+#     clf = GaussianNB()
+#     clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+#     # clf = LinearRegression()
+#     clf.fit(train_x, train_y)
+#     predict_y = clf.predict(test_x)
+#     accuracy = clf.score(test_x, test_y)
+#     accuracy_scores += accuracy
+#     recall = recall_score(test_y,predict_y,average = 'macro')
+#     recall_scores += recall
+#     precision = precision_score(test_y, predict_y, average='macro')
+#     precision_scores += precision
+#     f1 = f1_score(test_y,predict_y,average = 'macro')
+#     f1_scores += f1
+
 # plt.scatter([idx for idx in range(0,500)],predict_y[:500],c='blue')
 # plt.scatter([idx for idx in range(0,500)],test_y[:500] ,c='red')
 # plt.show()
 
-# ax = plt.gca()
-# ax.set_xlabel('x')
-# ax.set_ylabel('y')
-# ax.plot([idx for idx in range(0,100)],predict_y[:100],c='blue')
-# ax.plot([idx for idx in range(0,100)],test_y[:100] ,c='red')
-# plt.show()
+ax = plt.gca()
+ax.set_xlabel('x')
+ax.set_ylabel('y')
+ax.plot([idx for idx in range(0,100)],predict_y[:100],c='blue')
+ax.plot([idx for idx in range(0,100)],test_y[:100] ,c='red')
+plt.show()
 
-print('准确率：',accuracy_scores/10)
-print('召回率：',recall_scores/10)
-print('精确率：',precision_scores/10)
-print('F-measure：',f1_scores/10)
+# print('准确率：',accuracy_scores/10)
+# print('召回率：',recall_scores/10)
+# print('精确率：',precision_scores/10)
+# print('F-measure：',f1_scores/10)
 
 IPython.embed()
 
@@ -598,8 +605,10 @@ IPython.embed()
 
 ## 聚类
 from sklearn.cluster import KMeans
-n = 10
+n = 100
 cluster = []
+for i in range(0,n):
+    cluster.append(set())
 for i in range(n):
     cluster.append(set())
 model = Word2Vec(sentences = [data['tokens'] for data in datas],min_count = 2)
@@ -607,12 +616,10 @@ vectors = {}
 for v in model.wv.vocab.keys():
     if v in feature_words and len(v)>2:
         vectors[v] = model[v]
-labels = KMeans(n_clusters=100, random_state=9).fit_predict([vector for vector in vectors.values()])
+labels = KMeans(n_clusters=n, random_state=9).fit_predict([vector for vector in vectors.values()])
 
 for i in range(0,len(labels)):
-    if labels[i] == 3:
-        print(list(vectors.keys())[i])
-    # cluster[labels[i]].add(list(vectors.keys())[i])
+    cluster[labels[i]].add(list(vectors.keys())[i])
 
 
 feature_words = [words for words in cluster]
