@@ -34,7 +34,7 @@ def get(url,headers={},params=()):
             exit()
         except:
             print('retry')
-    print(url+' success')
+    # print(url+' success')
     return r
 
 
@@ -62,9 +62,9 @@ headers = {
 
 
 
-for i in range(7,200):
-    day = 86400000*(i-6)
-    date =  1515979236000
+for i in range(0,300):
+    day = i*86400000*15
+    date = 1546272000000
     t  = date + day 
     # yesterday = int(time.mktime(datetime.date.today().timetuple())) - one_day # 昨天0点
     # yesterday = int(str(yesterday)+'000')
@@ -88,7 +88,6 @@ for i in range(7,200):
     worksheet.write(0,4,'content')
     worksheet.write(0,5,'published')
 
-
     for idx in tqdm(range(0,len(datas))):
         # worksheet.write(idx+1,0,datas[idx]['headline'])
         url = article_url+datas[idx]['id']
@@ -101,9 +100,13 @@ for i in range(7,200):
         dateArray = datetime.datetime.utcfromtimestamp(published)
         date = dateArray.strftime("%Y-%m-%d")
         worksheet.write(idx+1,5,date)
-        worksheet.write(idx+1,4,del_tag(data['body']))
+        try:
+            worksheet.write(idx+1,4,del_tag(data['body']))
+        except:
+            worksheet.write(idx+1,4,'*')
         worksheet.write(idx+1,0,data['headline'])
         
+        time.sleep(2)
 
 
     workbook.save('data'+str(i)+'.xls')
@@ -112,5 +115,4 @@ for i in range(7,200):
 #     r = requests.get(url, headers=headers,verify=False)
 #     print(r.text)
     # data[-1:].
-
 
