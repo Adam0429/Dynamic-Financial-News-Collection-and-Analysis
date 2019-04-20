@@ -178,29 +178,30 @@ for i in tqdm(range(0,len(contents))):
         data['tags'].append(nltk.pos_tag(token))
     data['company'] = companies[i]
     price_list = json.loads(prices[i])       
-    data['rate'] = (price_list[1]-price_list[0])/price_list[0]
+    data['rate'] = (price_list[2]-price_list[1])/price_list[1]
     data['date'] = dates[i]
     datas.append(data)
 
-## sort by time
-# dates = {}
-# for i in tqdm(range(0,len(_datas))):
-#     dates[i] = int(time.mktime(time.strptime(_datas[i]['date'], "%Y-%m-%d")))
-# res = sorted(dates.items(),key=lambda dates:dates[1],reverse=False)
-# datas = []
-# for idx,date in res:
-#     datas.append(_datas[idx])
+    ## sort by time
+    # dates = {}
+    # for i in tqdm(range(0,len(_datas))):
+    #     dates[i] = int(time.mktime(time.strptime(_datas[i]['date'], "%Y-%m-%d")))
+    # res = sorted(dates.items(),key=lambda dates:dates[1],reverse=False)
+    # datas = []
+    # for idx,date in res:
+    #     datas.append(_datas[idx])
 
+    IPython.embed()
 
-count = {}
+    count = {}
 
-POS = 0
-NEG = 0
+    POS = 0
+    NEG = 0
 
-pos_count = 0
-neg_count = 0
+    pos_count = 0
+    neg_count = 0
 
-N = 0 #len of tokens
+    N = 0 #len of tokens
 
 
 for data in tqdm(datas):
