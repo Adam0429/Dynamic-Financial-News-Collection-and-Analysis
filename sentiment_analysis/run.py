@@ -129,15 +129,16 @@ def sentiment_score(text):
 # print('pos',pos_correct/pos_count,pos_count,pos_correct)
 # print('neg',neg_correct/neg_count,neg_count,neg_correct)
 
+path2018 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2018.xls'
+path2019 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2019.xls'
 
-path = r'data/labeled_data.xls'
-
-workbook = xlrd.open_workbook(path)
+workbook = xlrd.open_workbook(path2018)
 worksheet = workbook.sheet_by_index(0)
 contents = worksheet.col_values(1)
 companies = worksheet.col_values(2)
 prices = worksheet.col_values(3)
 dates = worksheet.col_values(4)
+
 rates = []
 score_list = []
 
@@ -167,6 +168,9 @@ for i in tqdm(range(0,len(contents))):
     # if '*' not in contents[i]:
         # if companies[i] != 'Apple Inc.':
         #     continue
+    price_list = json.loads(prices[i])   
+    if price_list[2] == price_list[1]:
+        continue
     data = {}
     data['content'] = contents[i]
     sents = sent_tokenize(data['content'])
@@ -177,11 +181,11 @@ for i in tqdm(range(0,len(contents))):
         data['tokens'].append(token)
         data['tags'].append(nltk.pos_tag(token))
     data['company'] = companies[i]
-    price_list = json.loads(prices[i])       
     data['rate'] = (price_list[2]-price_list[1])/price_list[1]
     data['date'] = dates[i]
     datas.append(data)
 
+    
     ## sort by time
     # dates = {}
     # for i in tqdm(range(0,len(_datas))):
@@ -191,17 +195,18 @@ for i in tqdm(range(0,len(contents))):
     # for idx,date in res:
     #     datas.append(_datas[idx])
 
-    IPython.embed()
 
-    count = {}
 
-    POS = 0
-    NEG = 0
 
-    pos_count = 0
-    neg_count = 0
+count = {}
 
-    N = 0 #len of tokens
+POS = 0
+NEG = 0
+
+pos_count = 0
+neg_count = 0
+
+N = 0 #len of tokens
 
 
 for data in tqdm(datas):
@@ -236,8 +241,6 @@ for data in tqdm(datas):
                 else:
                     count[token] = {'pos':0,'neg':1,'pos_rate':0,'neg_rate':-rate}
 
-
-IPython.embed()
 
 ## freq
 copy = count.copy()
@@ -323,75 +326,75 @@ for word in bl_pos:
 
 
 ## context sentiment dict
-sent_words = [word.lower() for word in sent_words]
-feature_words = {}
-sentiment_feature = {}
+# sent_words = [word.lower() for word in sent_words]
+# feature_words = {}
+# sentiment_feature = {}
 
-for data in tqdm(datas):
-    for tags in data['tags']:
-        for word,tag in tags:
-            if tag not in nn or len(word)<3: # vb+nn
-                continue
-            # word = stem_and_check(word)
-            if word not in feature_words.keys():
-                feature_words[word] = 1
-            else:
-                feature_words[word] += 1
+# for data in tqdm(datas):
+#     for tags in data['tags']:
+#         for word,tag in tags:
+#             if tag not in nn or len(word)<3: # vb+nn
+#                 continue
+#             # word = stem_and_check(word)
+#             if word not in feature_words.keys():
+#                 feature_words[word] = 1
+#             else:
+#                 feature_words[word] += 1
 
-# avg_f = sum([item[1] for item in feature_words.items()])/len(feature_words.keys())
-res = sorted(feature_words.items(),key=lambda feature_words:feature_words[1],reverse=True)
-words = res[:400]
-# for word,value in tqdm(copy.items()):
-#     if value<avg_f+200:
-#         del feature_words[word]
+# # avg_f = sum([item[1] for item in feature_words.items()])/len(feature_words.keys())
+# res = sorted(feature_words.items(),key=lambda feature_words:feature_words[1],reverse=True)
+# words = res[:400]
+# # for word,value in tqdm(copy.items()):
+# #     if value<avg_f+200:
+# #         del feature_words[word]
 
-feature_words = [inf.singularize(word).lower() for word,freq in words]
+# feature_words = [inf.singularize(word).lower() for word,freq in words]
 
-sf_len = 0
-for data in tqdm(datas):
-    rate = data['rate']
-    for tokens in data['tokens']:
-        token_dict = {}
-        for token in tokens:
-            token_dict[inf.singularize(token).lower()] = token
-        _tokens = [inf.singularize(token).lower() for token in tokens]
+# sf_len = 0
+# for data in tqdm(datas):
+#     rate = data['rate']
+#     for tokens in data['tokens']:
+#         token_dict = {}
+#         for token in tokens:
+#             token_dict[inf.singularize(token).lower()] = token
+#         _tokens = [inf.singularize(token).lower() for token in tokens]
 
-        for w in list(set(sent_words).intersection(set(_tokens))):
-            for f in list(set(feature_words).intersection(set(_tokens))):
-                if f != w:
-                    if abs(_tokens.index(w)-_tokens.index(f))<3 and ',' not in data['content'][min(data['content'].index(token_dict[f]),data['content'].index(token_dict[w])):max(data['content'].index(token_dict[f]),data['content'].index(token_dict[w]))]:
-                        sf_len += 1
-                        if f not in sentiment_feature.keys():
-                            sentiment_feature[f] = {}
-                            if rate > 0:
-                                sentiment_feature[f][w] = {'pos':1,'neg':0}
-                            if rate < 0:
-                                sentiment_feature[f][w] = {'pos':0,'neg':1}
-                        else:
-                            if w not in sentiment_feature[f].keys():
-                                sentiment_feature[f][w] = {'pos':0,'neg':0}
-                            if rate > 0:
-                                sentiment_feature[f][w]['pos'] += 1
-                            if rate < 0:
-                                sentiment_feature[f][w]['neg'] += 1
+#         for w in list(set(sent_words).intersection(set(_tokens))):
+#             for f in list(set(feature_words).intersection(set(_tokens))):
+#                 if f != w:
+#                     if abs(_tokens.index(w)-_tokens.index(f))<3 and ',' not in data['content'][min(data['content'].index(token_dict[f]),data['content'].index(token_dict[w])):max(data['content'].index(token_dict[f]),data['content'].index(token_dict[w]))]:
+#                         sf_len += 1
+#                         if f not in sentiment_feature.keys():
+#                             sentiment_feature[f] = {}
+#                             if rate > 0:
+#                                 sentiment_feature[f][w] = {'pos':1,'neg':0}
+#                             if rate < 0:
+#                                 sentiment_feature[f][w] = {'pos':0,'neg':1}
+#                         else:
+#                             if w not in sentiment_feature[f].keys():
+#                                 sentiment_feature[f][w] = {'pos':0,'neg':0}
+#                             if rate > 0:
+#                                 sentiment_feature[f][w]['pos'] += 1
+#                             if rate < 0:
+#                                 sentiment_feature[f][w]['neg'] += 1
 
-avg_sf = sf_len/len(sentiment_feature.keys())
-copy = sentiment_feature.copy()
+# avg_sf = sf_len/len(sentiment_feature.keys())
+# copy = sentiment_feature.copy()
 
-for f,v in tqdm(sentiment_feature.items()):
-    for w,value in v.items():
-        if value['pos']+value['neg']<avg_sf: #avg_sf
-            # print(f,w,value)
-            # del sentiment_feature[f][w]
-            sentiment_feature[f][w]['sent'] = 0
-            continue
-        pos = value['pos']/POS
-        neg = value['neg']/NEG
+# for f,v in tqdm(sentiment_feature.items()):
+#     for w,value in v.items():
+#         if value['pos']+value['neg']<avg_sf: #avg_sf
+#             # print(f,w,value)
+#             # del sentiment_feature[f][w]
+#             sentiment_feature[f][w]['sent'] = 0
+#             continue
+#         pos = value['pos']/POS
+#         neg = value['neg']/NEG
         
-        value['PD'] = (pos-neg)/(pos+neg) # polarity difference
-        sentiment_feature[f][w]['sent'] = value['PD'] * value['PD'] * np.sign(value['PD'])
+#         value['PD'] = (pos-neg)/(pos+neg) # polarity difference
+#         sentiment_feature[f][w]['sent'] = value['PD'] * value['PD'] * np.sign(value['PD'])
 
-res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
+# res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_feature[1]['sent'],reverse=False)
 
 ## company word
 # company_pos = {}
@@ -419,30 +422,30 @@ res = sorted(sentiment_feature.items(),key=lambda sentiment_feature:sentiment_fe
 #    print(' ')
 
 # 展示
-pos_res = {}
-for r in res:
-    if r[1]['sent'] == 1.0:
-        pos_res[r[0]] = r[1]['pos']+r[1]['neg']
-pos_res = sorted(pos_res.items(),key=lambda pos_res:pos_res[1],reverse=True)
-for r in pos_res[:20]:
-    print(r[0],'1.0',r[1])
-    print(' ')
+# pos_res = {}
+# for r in res:
+#     if r[1]['sent'] == 1.0:
+#         pos_res[r[0]] = r[1]['pos']+r[1]['neg']
+# pos_res = sorted(pos_res.items(),key=lambda pos_res:pos_res[1],reverse=True)
+# for r in pos_res[:20]:
+#     print(r[0],'1.0',r[1])
+#     print(' ')
 
-print(' ')
-print('========================')
-print(' ')
+# print(' ')
+# print('========================')
+# print(' ')
 
-neg_res = {}
-for r in res:
-    if r[1]['sent'] == -1.0:
-        neg_res[r[0]] = r[1]['pos']+r[1]['neg']
-neg_res = sorted(neg_res.items(),key=lambda neg_res:neg_res[1],reverse=True)
-for r in neg_res[:20]:
-    print(r[0],'-1.0',r[1])
-    print(' ')
-for sf,value in sentiment_feature.items():
-   if value['pos']+value['neg'] > avg_sf:
-      print(sf,freq)
+# neg_res = {}
+# for r in res:
+#     if r[1]['sent'] == -1.0:
+#         neg_res[r[0]] = r[1]['pos']+r[1]['neg']
+# neg_res = sorted(neg_res.items(),key=lambda neg_res:neg_res[1],reverse=True)
+# for r in neg_res[:20]:
+#     print(r[0],'-1.0',r[1])
+#     print(' ')
+# for sf,value in sentiment_feature.items():
+#    if value['pos']+value['neg'] > avg_sf:
+#       print(sf,freq)
 
 # Predict
 # content to vector
@@ -550,6 +553,16 @@ print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
 print('精确率：',precision_score(test_y, clf.predict(test_x), average='macro'))
 # print('MAE：',mean_absolute_error(test_y, predict_y))
 
+IPython.embed()
+
+# import pickle
+# output = open('sent_dict.pkl', 'wb')
+# input = open('sent_dict.pkl', 'rb')
+# s = pickle.dump(count, output)
+# output.close()
+# clf2 = pickle.load(input)
+# input.close()
+# print clf2.predict(X[0:1])
 
 # accuracy_scores = 0
 # recall_scores = 0

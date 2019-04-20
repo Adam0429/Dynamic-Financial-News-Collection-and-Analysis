@@ -22,7 +22,7 @@ def recent_price(stockname,start_time):
 		prices = web.DataReader(stockname, 'yahoo')
 		today_index = list(prices.index).index(t1)
 		tomorrow_index = prices.index[today_index+1]
-		recent_indexs = [prices.index[today_index+i] for i in range(-1,6)]
+		recent_indexs = [prices.index[today_index+i] for i in range(-1,2)]
 		# 前一天 当天 和 后五天的 
 		data = []
 		for index in recent_indexs:
@@ -48,12 +48,12 @@ dates = df['date']
 
 _contents = set()
 
-# workbook2 = xlwt.Workbook(encoding = 'utf-8')
-# worksheet2 = workbook2.add_sheet('label',cell_overwrite_ok=True)
+workbook2 = xlwt.Workbook(encoding = 'utf-8')
+worksheet2 = workbook2.add_sheet('label',cell_overwrite_ok=True)
 count = 0
 
 for idx in tqdm(range(0,len(df['date']))):
-	if contents[idx] in _contents:
+	if contents[idx] in _contents or type(contents[idx]) != type('str'):
 			continue
 	else:
 		_contents.add(contents[idx])
