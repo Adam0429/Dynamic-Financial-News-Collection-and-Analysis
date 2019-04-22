@@ -195,6 +195,35 @@ for i in tqdm(range(0,len(contents))):
     # for idx,date in res:
     #     datas.append(_datas[idx])
 
+workbook = xlrd.open_workbook(path2019)
+worksheet = workbook.sheet_by_index(0)
+contents = worksheet.col_values(1)
+companies = worksheet.col_values(2)
+prices = worksheet.col_values(3)
+dates = worksheet.col_values(4)
+rates = []
+score_list = []
+datas2 = []
+for i in tqdm(range(0,len(contents))):
+    # if '*' not in contents[i]:
+        # if companies[i] != 'Apple Inc.':
+        #     continue
+    price_list = json.loads(prices[i])
+    if price_list[2] == price_list[1]:
+        continue
+    data = {}
+    data['content'] = contents[i]
+    sents = sent_tokenize(data['content'])
+    data['tokens'] = []
+    data['tags'] = []
+    for sent in sents:
+        token = review_to_words(sent) # 去停用词会影响词性标注吗？？
+        data['tokens'].append(token)
+        data['tags'].append(nltk.pos_tag(token))
+    data['company'] = companies[i] 
+    data['rate'] = (price_list[2]-price_list[1])/price_list[1]
+    data['date'] = dates[i]
+    datas2.append(data)
 
 
 
@@ -517,6 +546,54 @@ for data in tqdm(datas):
                     datas[idx]['BlVector'][3] += bl_sent[word]
     # datas[idx]['DsVector'] = [adv_score,adv_score,noun_score,verb_score]
 
+for data in tqdm(datas2):
+    idx = datas2.index(data)
+    tokens = data['tokens']
+    datas2[idx]['DsVector'] = [0,0,0,0]
+    datas2[idx]['DsVector_rate'] = [0,0,0,0]
+    datas2[idx]['SnVector'] = [0,0,0,0]
+    datas2[idx]['BlVector'] = [0,0,0,0]
+    datas2[idx]['PmiVector'] = [0,0,0,0]
+    datas2[idx]['ContextVector'] = [0,0,0,0]
+    for tags in data['tags']:
+        for word,tag in tags:
+            if tag in adj:
+                if word in count.keys():
+                    datas2[idx]['DsVector'][0] += count[word]['sent']
+                    datas2[idx]['DsVector_rate'][0] += count[word]['sent_rate']
+                    datas2[idx]['PmiVector'][0] += count[word]['PMI_sent']
+                if word in sn.data.keys():
+                    datas2[idx]['SnVector'][0] += float(sn.polarity_intense(word))
+                if word in bl_sent.keys():
+                    datas2[idx]['BlVector'][0] += bl_sent[word]
+            elif tag in adv:
+                if word in count.keys():
+                    datas2[idx]['SnVector'][1] += count[word]['sent']
+                    datas2[idx]['DsVector_rate'][1] += count[word]['sent_rate']
+                    datas2[idx]['PmiVector'][1] += count[word]['PMI_sent']
+                if word in sn.data.keys():
+                    datas2[idx]['SnVector'][1] += float(sn.polarity_intense(word))
+                if word in bl_sent.keys():
+                    datas2[idx]['BlVector'][1] += bl_sent[word]  
+            elif tag in nn:
+                if word in count.keys():
+                    datas2[idx]['DsVector'][2] = count[word]['sent']
+                    datas2[idx]['DsVector_rate'][2] += count[word]['sent_rate']
+                    datas2[idx]['PmiVector'][2] += count[word]['PMI_sent']
+                if word in sn.data.keys():
+                    datas2[idx]['SnVector'][2] += float(sn.polarity_intense(word))
+                if word in bl_sent.keys():
+                    datas2[idx]['BlVector'][2] += bl_sent[word]
+            elif tag in vb:
+                if word in count.keys():
+                    datas2[idx]['DsVector'][3] = count[word]['sent']
+                    datas2[idx]['DsVector_rate'][3] += count[word]['sent_rate']
+                    datas2[idx]['PmiVector'][3] += count[word]['PMI_sent']
+                if word in sn.data.keys():
+                    datas2[idx]['SnVector'][3] += float(sn.polarity_intense(word))
+                if word in bl_sent.keys():
+                    datas2[idx]['BlVector'][3] += bl_sent[word]
+
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
 from sklearn import model_selection
@@ -538,7 +615,9 @@ X = [data['DsVector_rate'] for data in datas]
 Y = [np.sign(data['rate']) for data in datas]
 # Y = [data['rate'] for data in datas]
 
-train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+
+# train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+
 # # x_train = X[:2500]
 # # y_train = Y[:2500]
 # # x_test = X[-300:]
@@ -546,6 +625,7 @@ train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0
 # clf = GaussianNB()
 clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
 # clf = LinearRegression()
+
 clf.fit(np.array(train_x), np.array(train_y))
 predict_y = clf.predict(test_x)
 print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
@@ -554,6 +634,20 @@ print('精确率：',precision_score(test_y, clf.predict(test_x), average='macro
 # print('MAE：',mean_absolute_error(test_y, predict_y))
 
 IPython.embed()
+
+
+train_x = [data['DsVector_rate'] for data in datas]
+train_y = [np.sign(data['rate']) for data in datas]
+test_x = [data['DsVector_rate'] for data in datas2[2000:]]
+test_y = [np.sign(data['rate']) for data in datas2[2000:]]
+# clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+clf = GaussianNB()
+# clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
+print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+print('精确率：',precision_score(test_y, clf.predict(test_x), average='macro'))
 
 # import pickle
 # output = open('sent_dict.pkl', 'wb')
@@ -603,12 +697,12 @@ IPython.embed()
 # plt.scatter([idx for idx in range(0,500)],test_y[:500] ,c='red')
 # plt.show()
 
-ax = plt.gca()
-ax.set_xlabel('x')
-ax.set_ylabel('y')
-ax.plot([idx for idx in range(0,100)],predict_y[:100],c='blue')
-ax.plot([idx for idx in range(0,100)],test_y[:100] ,c='red')
-plt.show()
+# ax = plt.gca()
+# ax.set_xlabel('x')
+# ax.set_ylabel('y')
+# ax.plot([idx for idx in range(0,100)],predict_y[:100],c='blue')
+# ax.plot([idx for idx in range(0,100)],test_y[:100] ,c='red')
+# plt.show()
 
 # print('准确率：',accuracy_scores/10)
 # print('召回率：',recall_scores/10)
@@ -617,6 +711,48 @@ plt.show()
 
 IPython.embed()
 
+# dnn
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout
+from keras.utils import to_categorical
+
+
+train_x = [data['DsVector_rate'] for data in datas]
+Y = [np.sign(data['rate']) for data in datas]
+test_x = [data['DsVector_rate'] for data in datas2[2000:]]
+Y2 = [np.sign(data['rate']) for data in datas2[2000:]]
+
+
+
+train_y = []
+for y in Y:
+    if y == 1:
+        train_y.append(np.array([0,1]))
+    else:    
+        train_y.append(np.array([1,0]))
+
+test_y = []
+for y in Y2:
+    if y == 1:
+        test_y.append(np.array([0,1]))
+    else:    
+        test_y.append(np.array([1,0]))
+
+# num_classes = 2
+# test_y = to_categorical(Y,num_classes=3)
+
+nmodel = Sequential()
+nmodel.add(Dense(units=num_classes, activation = 'relu', input_dim = np.array(train_x).shape[1]))
+nmodel.add(Dropout(0.5))
+nmodel.add(Dense(2, activation = 'relu'))
+nmodel.add(Dropout(0.5))
+# dropout:https://blog.csdn.net/program_developer/article/details/80737724
+nmodel.add(Dense(2, activation = 'softmax'))
+nmodel.compile(loss = 'categorical_crossentropy',
+               optimizer = 'adam',
+               metrics = ['accuracy'])
+nmodel.fit(np.array(train_x),np.array(train_y),epochs=10, batch_size=5)
+nmodel.evaluate(np.array(test_x),np.array(test_y), batch_size=5)
 
 
 ## 聚类
@@ -643,132 +779,3 @@ for i in range(0,len(labels)):
 for c in cluster:
     if len(c) != 0:
         print(c)
-
-feature_words = [words for words in cluster]
-
-sf_len = 0
-for data in tqdm(datas):
-    tokens = data['tokens']
-    rate = data['rate']
-    tokens = [inf.singularize(token).lower() for token in tokens]
-    token_dict = {}
-    for token in data['tokens']:
-        token_dict[inf.singularize(token).lower()] = token
-    for w in sent_words:
-        if w not in tokens:
-            continue
-        for words in cluster:
-            for f in words:    
-                if f in tokens and f != w:
-                    if abs(tokens.index(w)-tokens.index(f))<3 and ',' not in data['content'][min(data['content'].index(token_dict[f]),data['content'].index(token_dict[w])):max(data['content'].index(token_dict[f]),data['content'].index(token_dict[w]))]:
-                        sf_len += 1
-                        if cluster.index(words) not in sentiment_feature.keys():
-                            sentiment_feature[cluster.index(words)] = {}
-                            if rate > 0:
-                                sentiment_feature[cluster.index(words)][w] = {'pos':1,'neg':0}
-                            if rate < 0:
-                                sentiment_feature[cluster.index(words)][w] = {'pos':0,'neg':1}
-                        else:
-                            if w not in sentiment_feature[cluster.index(words)].keys():
-                                sentiment_feature[cluster.index(words)][w] = {'pos':0,'neg':0}
-                            if rate > 0:
-                                sentiment_feature[cluster.index(words)][w]['pos'] += 1
-                            if rate < 0:
-                                sentiment_feature[cluster.index(words)][w]['neg'] += 1
-
-# avg_sf = sf_len/len(sentiment_feature.keys())
-# copy = sentiment_feature.copy()
-
-for f,v in tqdm(sentiment_feature.items()):
-    for w,value in v.items():
-        if value['pos']+value['neg']<2: #avg_sf
-            # print(f,w,value)
-            # del sentiment_feature[f][w]
-            sentiment_feature[f][w]['sent'] = 0
-            continue
-        pos = value['pos']/POS
-        neg = value['neg']/NEG
-        
-        value['PD'] = (pos-neg)/(pos+neg) # polarity difference
-        sentiment_feature[f][w]['sent'] = value['PD'] * value['PD'] * np.sign(value['PD'])
-
-for data in tqdm(datas):
-    idx = datas.index(data)
-    tags = data['tags']
-    tokens = data['tokens']
-    datas[idx]['DsVector'] = [0,0,0,0]
-    datas[idx]['SnVector'] = [0,0,0,0]
-    datas[idx]['BlVector'] = [0,0,0,0]
-    datas[idx]['PmiVector'] = [0,0,0,0]
-    datas[idx]['ContextVector'] = [0,0,0,0]
-
-
-    for f in tokens:
-        if f not in model.wv.vocab.keys():
-            continue
-        for idx in sentiment_feature.keys():
-            for _words in sentiment_feature[idx]:
-                if w in tokens and w in _words:
-                    if abs(tokens.index(f)-tokens.index(w))<3 and ',' not in data['content'][min(data['content'].index(f),data['content'].index(w)):max(data['content'].index(f),data['content'].index(w))]:
-                        if tags[tokens.index(f)][1] in adj:
-                            if f in count.keys():
-                                datas[idx]['ContextVector'][0] += count[f]['sent']
-                        elif tags[tokens.index(f)][1] in adv:
-                            if f in count.keys():
-                                datas[idx]['ContextVector'][1] += count[f]['sent']
-                        if tags[tokens.index(w)][1] in nn:
-                            if w in count.keys():
-                                datas[idx]['ContextVector'][2] = count[w]['sent']
-                        elif tags[tokens.index(w)][1] in vb:
-                            if w in count.keys():
-                                datas[idx]['ContextVector'][3] = count[w]['sent']
-                        # print(sentiment_feature[f][w]['sent'])
-
-
-
-
-## dnn
-# from keras.models import Sequential
-# from keras.layers import Dense, Activation, Dropout
-# from keras.utils import to_categorical
-
-# x_train,x_test,y_train,y_test = model_selection.train_test_split(X,Y,test_size=0.1,shuffle=True)
-
-# num_classes = 2
-# x_train = np.array(x_train)
-# y_train = np.array(y_train)
-# x_test = np.array(x_test)
-# y_test = np.array(y_test)
-
-# y_train = to_categorical(y_train,num_classes=2)
-# y_test = to_categorical(y_test,num_classes=2)
-
-# nmodel = Sequential()
-# nmodel.add(Dense(units=num_classes, activation = 'relu', input_dim = x_train.shape[1]))
-# nmodel.add(Dropout(0.5))
-# nmodel.add(Dense(2, activation = 'relu'))
-# nmodel.add(Dropout(0.5))
-# # dropout:https://blog.csdn.net/program_developer/article/details/80737724
-# nmodel.add(Dense(2, activation = 'softmax'))
-# nmodel.compile(loss = 'categorical_crossentropy',
-#                optimizer = 'adam',
-#                metrics = ['accuracy'])
-# nmodel.fit(x_train,y_train,epochs=10, batch_size=5)
-# nmodel.evaluate(x_test,y_test, batch_size=5)
-
-
-# sheet = workbook.sheet_by_index(1)
-# labels = sheet.col_values(0)
-# contents = sheet.col_values(5)
-# for i in tqdm(range(0,contents)):
-#   if labels[i] == sentiment_score_list(contents[1]):
-#    correct += 1
-
-    # print(content,sentiment_score_list(content))
-
-# newlist =[i for i in scores if i>0.3]
-# print(len(newlist))
-# print(correct/len(labels))
-
-# score = sentiment_score_list('i love you very much')  
-# print(score)

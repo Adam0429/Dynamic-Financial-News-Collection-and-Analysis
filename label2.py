@@ -53,7 +53,7 @@ worksheet2 = workbook2.add_sheet('label',cell_overwrite_ok=True)
 count = 0
 
 for idx in tqdm(range(0,len(df['date']))):
-	if contents[idx] in _contents or type(contents[idx]) != type('str'):
+	if contents[idx] in _contents or type(contents[idx]) != type('str') or type(titles[idx]) != type('str'):
 			continue
 	else:
 		_contents.add(contents[idx])

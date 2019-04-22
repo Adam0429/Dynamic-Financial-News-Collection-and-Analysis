@@ -86,7 +86,7 @@ def PS(w,contents,labels):
 
 
 
-workbook = xlrd.open_workbook(r'data/labeled_data2.xls')
+workbook = xlrd.open_workbook(r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2018.xls')
 sheet = workbook.sheet_by_index(0)
 contents = sheet.col_values(1)
 prices = sheet.col_values(3)
@@ -182,16 +182,34 @@ X_full_tfidf = X_full_tfidf.toarray()
 
 num_classes = 2
 
-x = X_bok_count
-y = np.array(labels)
-y = to_categorical(y,num_classes=2)
 
-
-
-x_train,x_test,y_train,y_test=model_selection.train_test_split(x,y,test_size=0.2)
 # x = np.random.random((664,200))
 # y = np.random.random((664, 10))
 
+
+from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LinearRegression
+from sklearn import model_selection
+from sklearn.model_selection import KFold
+from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import mean_absolute_error
+from sklearn.ensemble import RandomForestClassifier
+from keras.utils import to_categorical
+import matplotlib.pyplot as plt
+
+x = X_bok_count
+y = np.array(labels)
+y = to_categorical(y,num_classes=2)
+train_x,test_x,train_y,test_y=model_selection.train_test_split(x,y,test_size=0.2,shuffle=False)
+clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+# clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
+print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+print('精确率：',precision_score(test_y, clf.predict(test_x), average='macro'))
 
 nmodel = Sequential()
 nmodel.add(Dense(units=num_classes, activation = 'relu', input_dim = x.shape[1]))
@@ -213,11 +231,11 @@ nmodel.compile(loss = 'categorical_crossentropy',
                metrics = ['accuracy'])
 #verbose=1:更新日志 verbose=2:每个epoch一个进度行
 
-nmodel.fit(x_train,y_train,epochs=10, batch_size=5)
-# score = model.evaluate(x_test, y_test, batch_size=20)
+nmodel.fit(train_x,train_y,epochs=10, batch_size=5)
+score = nmodel.evaluate(test_x, test_y, batch_size=20)
+print(score)
 
-
-predict = nmodel.predict_classes(x_test,batch_size=5)
+# predict = nmodel.predict_classes(x_test,batch_size=5)
 
 # for i in range(predict)
 

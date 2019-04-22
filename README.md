@@ -9,7 +9,7 @@ Final project
 
 将涨跌换成涨幅，做回归测试
 
-data coll report missing 
+data report 
 
 提供四维向量接口
 
