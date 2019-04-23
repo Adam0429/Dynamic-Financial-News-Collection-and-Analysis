@@ -1,4 +1,3 @@
-from senticnet.senticnet import SenticNet
 import nltk
 from tqdm import tqdm
 import xlrd
@@ -10,10 +9,7 @@ import IPython
 import re
 from nltk.corpus import stopwords
 import json
-import inflection as inf
-from wordcloud import WordCloud
 from gensim.models import Word2Vec
-import enchant
 import time
 from nltk import sent_tokenize
 
@@ -45,11 +41,11 @@ def review_to_words(review_text):
     return meaningful_words
 
 # d = enchant.Dict("en_US")
-import spacy
-nlp = spacy.load('en')
-def stem_and_check(word):
-    word = nlp(word)
-    return word[0].lemma_
+# import spacy
+# nlp = spacy.load('en')
+# def stem_and_check(word):
+#     word = nlp(word)
+#     return word[0].lemma_
     # word = inf.singularize(word)
     # word = nltk.PorterStemmer().stem(word)
     # if d.check(word):
@@ -82,7 +78,38 @@ def output_cloud(count,name):
     wc.generate(text)
     wc.to_file(name+'.png') #图片保存
 
-sn = SenticNet()
+
+def vote(results,datas):
+    if len(results) != len(datas):
+        raise Exception("error")
+    new_results = []
+    for i in range(0,len(results)):
+        count = 0
+        company = datas[i]['company']
+        date = datas[i]['date']
+        for data in datas:
+            if data['company'] == company and data['date'] == date:
+                idx = datas.index(data)
+                # if idx!=i:
+                #     print(i)
+                #     print(idx)
+                #     print('========')
+                count += results[idx]
+        if count < 0:  
+            new_results.append(np.float64(-1))
+        else:
+            new_results.append(np.float64(1))
+    return np.array(new_results)
+
+def accuracy(y,y2):
+    if len(y) != len(y2):
+        raise Exception("error")
+    count = 0
+    for i in range(0,len(y)):
+        if y[i] == y2[i]:
+            count += 1
+    return count/len(y2)
+
 # concept_info = sn.concept('love')
 # polarity_value = sn.polarity_value('love')
 # polarity_intense = sn.polarity_intense('love')
@@ -106,6 +133,121 @@ def sentiment_score(text):
     # if count == 0: #mid
     #   return -1 
     # return score/count
+def load_data(path):
+    workbook = xlrd.open_workbook(path)
+    worksheet = workbook.sheet_by_index(0)
+    contents = worksheet.col_values(1)
+    companies = worksheet.col_values(2)
+    prices = worksheet.col_values(3)
+    dates = worksheet.col_values(4)
+    datas = []
+    for i in tqdm(range(0,len(contents))):
+    # if '*' not in contents[i]:
+        # if companies[i] != 'Apple Inc.':
+        #     continue
+        price_list = json.loads(prices[i])   
+        if price_list[2] == price_list[1]:
+            continue
+        data = {}
+        data['content'] = contents[i]
+        sents = sent_tokenize(data['content'])
+        data['tokens'] = []
+        data['tags'] = []
+        for sent in sents:
+            token = review_to_words(sent) # 去停用词会影响词性标注吗？？
+            data['tokens'].append(token)
+            data['tags'].append(nltk.pos_tag(token))
+        data['company'] = companies[i]
+        data['rate'] = (price_list[2]-price_list[1])/price_list[1]
+        data['date'] = dates[i]
+        datas.append(data)
+
+    return datas
+
+def train_sent_dict(datas):
+    count = {}
+
+    POS = 0
+    NEG = 0
+
+    pos_count = 0
+    neg_count = 0
+
+    N = 0 #len of tokens
+        
+    for data in tqdm(datas):
+        for tokens in data['tokens']: 
+            N += len(tokens)
+            rate = data['rate'] # 选当天的股票变化判断涨跌，因为相关度当天的最高
+            if rate>0:
+                pos_count += 1
+                POS += len(tokens)
+                for token in tokens:
+                    if len(token) < 3:
+                        continue
+                    if 'not' in tokens:
+                        token = 'not_'+token
+                    if token in count.keys():
+                        count[token]['pos'] += 1
+                        count[token]['pos_rate'] += rate
+                    else:
+                        count[token] = {'pos':1,'neg':0,'pos_rate':rate,'neg_rate':0} 
+
+            if rate<0:
+                neg_count += 1
+                NEG += len(tokens)
+                for token in tokens:
+                    if len(token) < 3:
+                        continue
+                    if 'not' in tokens:
+                        token = 'not_'+token
+                    if token in count.keys():
+                        count[token]['neg'] += 1
+                        count[token]['neg_rate'] -= rate
+                    else:
+                        count[token] = {'pos':0,'neg':1,'pos_rate':0,'neg_rate':-rate}
+                        ## freq
+    copy = count.copy()
+    sent_words = [] # PD>0.3情感值
+
+    freq_pos = pos_count/len(datas) 
+    freq_neg = neg_count/len(datas)
+
+    # DS sent and PMI sent
+    for word,value in tqdm(copy.items()):
+        if value['pos']+value['neg']<20:
+            del count[word]
+            continue
+        freq_w_pos = value['pos']/len(datas)
+        freq_w_neg = value['neg']/len(datas)
+        freq_w = (value['pos']+value['neg'])/len(datas)
+        if freq_w_pos*N == 0:
+            PMI_w_pos = 0
+        else:
+            PMI_w_pos = np.log2(freq_w_pos*N/freq_w*freq_pos)
+        if freq_w_neg*N == 0:
+            PMI_w_neg = 0
+        else:
+            PMI_w_neg = np.log2(freq_w_neg*N/freq_w*freq_neg)
+        count[word]['PMI_sent'] = PMI_w_pos - PMI_w_neg
+
+        pos = value['pos']/len(datas)
+        neg = value['neg']/len(datas)
+        value['PD'] = (pos-neg)/(pos+neg) # polarity difference
+        if abs(value['PD']) > 0.3 and nltk.pos_tag([word])[0][1] in adj+adv:  
+            sent_words.append(word)
+        count[word]['sent'] = value['PD']*value['PD'] * np.sign(value['PD'])
+
+        pos_rate = value['pos_rate']/len(datas)
+        neg_rate = value['neg_rate']/len(datas)
+        value['PD_rate'] = (pos_rate-neg_rate)/(pos_rate+neg_rate) # polarity difference
+        count[word]['sent_rate'] = value['PD_rate']*value['PD_rate'] * np.sign(value['PD_rate'])
+    return count
+
+path = 'labeled_data.xls'
+datas = load_data(path)
+count = train_sent_dict(datas)
+IPython.embed()
 
 # test sentiment_score accuracy
 # scores = []
@@ -142,171 +284,43 @@ dates = worksheet.col_values(4)
 rates = []
 score_list = []
 
-# for i in tqdm(range(0,len(contents))):
-#    rate = []
-#    price_list = json.loads(prices[i])
-#    for idx in range(0,6):
-#       rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
-#    rates.append(rate)
-#    score_list.append(sentiment_score(contents[i]))
-
-# # 情感极性与六天内（包括）新闻涨跌比率的相关度
-# # fiveday_rate_list = []
-# for i in range(0,6):
-#    rate = [x[i] for x in rates]
-#    data = {
-#         'scores':score_list,
-#         'rates':rate
-#         }
-
-#    df = pd.DataFrame(data)
-#    # print(df)
-#    print(df.corr("kendall"))
-
-datas = []
 for i in tqdm(range(0,len(contents))):
-    # if '*' not in contents[i]:
-        # if companies[i] != 'Apple Inc.':
-        #     continue
-    price_list = json.loads(prices[i])   
-    if price_list[2] == price_list[1]:
-        continue
-    data = {}
-    data['content'] = contents[i]
-    sents = sent_tokenize(data['content'])
-    data['tokens'] = []
-    data['tags'] = []
-    for sent in sents:
-        token = review_to_words(sent) # 去停用词会影响词性标注吗？？
-        data['tokens'].append(token)
-        data['tags'].append(nltk.pos_tag(token))
-    data['company'] = companies[i]
-    data['rate'] = (price_list[2]-price_list[1])/price_list[1]
-    data['date'] = dates[i]
-    datas.append(data)
-
-    
-    ## sort by time
-    # dates = {}
-    # for i in tqdm(range(0,len(_datas))):
-    #     dates[i] = int(time.mktime(time.strptime(_datas[i]['date'], "%Y-%m-%d")))
-    # res = sorted(dates.items(),key=lambda dates:dates[1],reverse=False)
-    # datas = []
-    # for idx,date in res:
-    #     datas.append(_datas[idx])
-
-workbook = xlrd.open_workbook(path2019)
-worksheet = workbook.sheet_by_index(0)
-contents = worksheet.col_values(1)
-companies = worksheet.col_values(2)
-prices = worksheet.col_values(3)
-dates = worksheet.col_values(4)
-rates = []
-score_list = []
-datas2 = []
-for i in tqdm(range(0,len(contents))):
-    # if '*' not in contents[i]:
-        # if companies[i] != 'Apple Inc.':
-        #     continue
+    rate = []
     price_list = json.loads(prices[i])
-    if price_list[2] == price_list[1]:
-        continue
-    data = {}
-    data['content'] = contents[i]
-    sents = sent_tokenize(data['content'])
-    data['tokens'] = []
-    data['tags'] = []
-    for sent in sents:
-        token = review_to_words(sent) # 去停用词会影响词性标注吗？？
-        data['tokens'].append(token)
-        data['tags'].append(nltk.pos_tag(token))
-    data['company'] = companies[i] 
-    data['rate'] = (price_list[2]-price_list[1])/price_list[1]
-    data['date'] = dates[i]
-    datas2.append(data)
+    for idx in range(0,6):
+      rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
+    rates.append(rate)
+    score_list.append(sentiment_score(contents[i]))
+
+# 合并一天新闻
+# for i in tqdm(range(0,len(contents))):
+#     rate = []
+#     price_list = json.loads(prices[i])
+#     for idx in range(0,6):
+#       rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
+#     if rate in rates:
+#         idx = rates.index(rate)
+#         score_list[idx] += sentiment_score(contents[i])
+#         continue
+#     rates.append(rate)
+#     score_list.append(sentiment_score(contents[i]))
+
+## 情感极性与六天内（包括）新闻涨跌比率的相关度
+fiveday_rate_list = []
+for i in range(0,6):
+   rate = [x[i] for x in rates]
+   data = {
+        'scores':score_list,
+        'rates':rate
+        }
+
+   df = pd.DataFrame(data)
+   # print(df)
+   print(df.corr("kendall"))
 
 
-
-count = {}
-
-POS = 0
-NEG = 0
-
-pos_count = 0
-neg_count = 0
-
-N = 0 #len of tokens
-
-
-for data in tqdm(datas):
-    for tokens in data['tokens']: 
-        N += len(tokens)
-        rate = data['rate'] # 选当天的股票变化判断涨跌，因为相关度当天的最高
-        if rate>0:
-            pos_count += 1
-            POS += len(tokens)
-            for token in tokens:
-                if len(token) < 3:
-                    continue
-                if 'not' in tokens:
-                    token = 'not_'+token
-                if token in count.keys():
-                    count[token]['pos'] += 1
-                    count[token]['pos_rate'] += rate
-                else:
-                    count[token] = {'pos':1,'neg':0,'pos_rate':rate,'neg_rate':0} 
-
-        if rate<0:
-            neg_count += 1
-            NEG += len(tokens)
-            for token in tokens:
-                if len(token) < 3:
-                    continue
-                if 'not' in tokens:
-                    token = 'not_'+token
-                if token in count.keys():
-                    count[token]['neg'] += 1
-                    count[token]['neg_rate'] -= rate
-                else:
-                    count[token] = {'pos':0,'neg':1,'pos_rate':0,'neg_rate':-rate}
-
-
-## freq
-copy = count.copy()
-sent_words = [] # PD>0.3情感值
-
-freq_pos = pos_count/len(datas) 
-freq_neg = neg_count/len(datas)
-
-# DS sent and PMI sent
-for word,value in tqdm(copy.items()):
-    if value['pos']+value['neg']<20:
-        del count[word]
-        continue
-    freq_w_pos = value['pos']/len(datas)
-    freq_w_neg = value['neg']/len(datas)
-    freq_w = (value['pos']+value['neg'])/len(datas)
-    if freq_w_pos*N == 0:
-        PMI_w_pos = 0
-    else:
-        PMI_w_pos = np.log2(freq_w_pos*N/freq_w*freq_pos)
-    if freq_w_neg*N == 0:
-        PMI_w_neg = 0
-    else:
-        PMI_w_neg = np.log2(freq_w_neg*N/freq_w*freq_neg)
-    count[word]['PMI_sent'] = PMI_w_pos - PMI_w_neg
-
-    pos = value['pos']/len(datas)
-    neg = value['neg']/len(datas)
-    value['PD'] = (pos-neg)/(pos+neg) # polarity difference
-    if abs(value['PD']) > 0.3 and nltk.pos_tag([word])[0][1] in adj+adv:  
-        sent_words.append(word)
-    count[word]['sent'] = value['PD']*value['PD'] * np.sign(value['PD'])
-
-    pos_rate = value['pos_rate']/len(datas)
-    neg_rate = value['neg_rate']/len(datas)
-    value['PD_rate'] = (pos_rate-neg_rate)/(pos_rate+neg_rate) # polarity difference
-    count[word]['sent_rate'] = value['PD_rate']*value['PD_rate'] * np.sign(value['PD_rate'])
+datas = load_data(path2018)
+count = train_sent_dict(datas)
 
 
 # res = sorted(sent_words.items(),key=lambda sent_words:sent_words[1],reverse=False)
@@ -331,10 +345,12 @@ for r in res[:100]:
 # output_cloud(pos_words,'pos')
 # output_cloud(neg_words,'neg')
 
+datas = load_data(path2019)
+
 ## 求于bl词典的覆盖率
 bl_sent = {}
-bl_pos = my_read('sentiment_analysis/bl/positive.txt')  # 4783
-bl_neg = my_read('sentiment_analysis/bl/negative.txt')  # 2006
+bl_pos = my_read('/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/sentiment_analysis/bl/positive.txt')  # 4783
+bl_neg = my_read('/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/sentiment_analysis/bl/negative.txt')  # 2006
 
 
 for word in bl_pos:
@@ -352,7 +368,6 @@ for word in bl_pos:
 #    if word in bl_neg:
 #       nc += 1
 # neg_accuracy = nc/len(neg_words)  # 0.18
-
 
 ## context sentiment dict
 # sent_words = [word.lower() for word in sent_words]
@@ -478,7 +493,6 @@ for word in bl_pos:
 
 # Predict
 # content to vector
-
 for data in tqdm(datas):
     idx = datas.index(data)
     tokens = data['tokens']
@@ -545,6 +559,7 @@ for data in tqdm(datas):
                 if word in bl_sent.keys():
                     datas[idx]['BlVector'][3] += bl_sent[word]
     # datas[idx]['DsVector'] = [adv_score,adv_score,noun_score,verb_score]
+
 
 for data in tqdm(datas2):
     idx = datas2.index(data)
@@ -616,7 +631,7 @@ Y = [np.sign(data['rate']) for data in datas]
 # Y = [data['rate'] for data in datas]
 
 
-# train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
 
 # # x_train = X[:2500]
 # # y_train = Y[:2500]
@@ -628,13 +643,14 @@ clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
 
 clf.fit(np.array(train_x), np.array(train_y))
 predict_y = clf.predict(test_x)
-print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
+
+print('准确率：',clf.score(np.array(test_x), np.array(test_y)))
 print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
-print('精确率：',precision_score(test_y, clf.predict(test_x), average='macro'))
+print('精确率：',precision_score(test_y, predict_y, average='macro'))
 # print('MAE：',mean_absolute_error(test_y, predict_y))
 
-IPython.embed()
-
+vote_predict_y = vote(predict_y,datas[-len(test_x):])
+print('投票算法准确率：',accuracy(vote_predict_y,test_y)) 
 
 train_x = [data['DsVector_rate'] for data in datas]
 train_y = [np.sign(data['rate']) for data in datas]
@@ -647,7 +663,26 @@ clf.fit(np.array(train_x), np.array(train_y))
 predict_y = clf.predict(test_x)
 print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
 print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+print('精确率：',precision_score(test_y, predict_y, average='macro'))
+
+vote_predict_y = vote(predict_y,datas[-len(test_x):])
+print('投票算法准确率：',accuracy(vote_predict_y,test_y)) 
+
+# company
+train_x = [data['DsVector_rate'] for data in datas]
+train_y = [np.sign(data['rate']) for data in datas]
+test_x = [data['DsVector_rate'] for data in datas2 if data['company'] =='Apple Inc.']
+test_y = [np.sign(data['rate']) for data in datas2 if data['company'] =='Apple Inc.']
+clf = GaussianNB()
+# clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
+print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
 print('精确率：',precision_score(test_y, clf.predict(test_x), average='macro'))
+
+vote_predict_y = vote(predict_y,datas[-len(test_x):])
+print('投票算法准确率：',accuracy(vote_predict_y,test_y)) 
 
 # import pickle
 # output = open('sent_dict.pkl', 'wb')
@@ -709,7 +744,6 @@ print('精确率：',precision_score(test_y, clf.predict(test_x), average='macro
 # print('精确率：',precision_scores/10)
 # print('F-measure：',f1_scores/10)
 
-IPython.embed()
 
 # dnn
 from keras.models import Sequential
@@ -738,7 +772,7 @@ for y in Y2:
     else:    
         test_y.append(np.array([1,0]))
 
-# num_classes = 2
+num_classes = 2
 # test_y = to_categorical(Y,num_classes=3)
 
 nmodel = Sequential()
@@ -753,7 +787,6 @@ nmodel.compile(loss = 'categorical_crossentropy',
                metrics = ['accuracy'])
 nmodel.fit(np.array(train_x),np.array(train_y),epochs=10, batch_size=5)
 nmodel.evaluate(np.array(test_x),np.array(test_y), batch_size=5)
-
 
 ## 聚类
 from sklearn.cluster import KMeans

@@ -23,8 +23,9 @@ def sentiment_score(text):
     return score
 
 path2018 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2018.xls'
+path2019 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2019.xls'
 
-workbook = xlrd.open_workbook(path2018)
+workbook = xlrd.open_workbook(path2019)
 worksheet = workbook.sheet_by_index(0)
 titles = worksheet.col_values(0)
 contents = worksheet.col_values(1)

@@ -6,7 +6,21 @@ import pandas_datareader.data as web
 from tqdm import tqdm
 import IPython
 import glob
+import openpyxl
 # import spacy
+
+
+
+stock_prices = {}
+
+for relations in tqdm(_list):
+	try:
+		price = web.DataReader(relations[0], 'yahoo')
+		stock_prices[relations[0]] = price
+	except:
+		pass
+print(len(stock_prices.keys()))
+
 
 def recent_price(stockname,start_time):
 	# today = datetime.date.today()
@@ -19,7 +33,7 @@ def recent_price(stockname,start_time):
 	# Volume       521800.000000
 	# Adj Close       153.603760
 	try:
-		prices = web.DataReader(stockname, 'yahoo')
+		prices = stock_prices[stockname]
 		today_index = list(prices.index).index(t1)
 		tomorrow_index = prices.index[today_index+1]
 		recent_indexs = [prices.index[today_index+i] for i in range(-1,2)]
@@ -33,7 +47,6 @@ def recent_price(stockname,start_time):
 		return
 	return data
 
-# path = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/data2.xls'
 df = pd.read_csv(u'news.csv',encoding='ISO-8859-1') 
 
 titles = df['title']
@@ -48,11 +61,14 @@ dates = df['date']
 
 _contents = set()
 
-workbook2 = xlwt.Workbook(encoding = 'utf-8')
-worksheet2 = workbook2.add_sheet('label',cell_overwrite_ok=True)
-count = 0
 
-for idx in tqdm(range(0,len(df['date']))):
+outwb = openpyxl.Workbook()  # 打开一个将写的文件
+outws = outwb.create_sheet(index=0)  # 在将写的文件创建sheet
+
+
+count = 1
+
+for idx in tqdm(range(0,len(titles))):
 	if contents[idx] in _contents or type(contents[idx]) != type('str') or type(titles[idx]) != type('str'):
 			continue
 	else:
@@ -65,17 +81,17 @@ for idx in tqdm(range(0,len(df['date']))):
 			if item in contents[idx]:
 				recent_prices = recent_price(relations[0],dates[idx])
 				if recent_prices != None:
-					worksheet2.write(count,0,titles[idx])
-					worksheet2.write(count,1,contents[idx])
-					worksheet2.write(count,2,relations[1])
-					worksheet2.write(count,3,str(recent_prices))
-					worksheet2.write(count,4,dates[idx])
+					outws.cell(count, 1).value = titles[idx]
+					outws.cell(count, 2).value = contents[idx]
+					outws.cell(count, 3).value = relations[1]
+					outws.cell(count, 4).value = str(recent_prices)
+					outws.cell(count, 5).value = dates[idx]
 					count += 1
 				break
 
 
-workbook2.save('labeled_data.xls')
-
+saveExcel = "labeled_data.xls"
+outwb.save(saveExcel)
 
 
 
