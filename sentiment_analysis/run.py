@@ -215,7 +215,7 @@ def train_sent_dict(datas):
 
     # DS sent and PMI sent
     for word,value in tqdm(copy.items()):
-        if value['pos']+value['neg']<20:
+        if value['pos']+value['neg']<2000:
             del count[word]
             continue
         freq_w_pos = value['pos']/len(datas)
