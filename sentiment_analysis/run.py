@@ -12,6 +12,7 @@ import json
 from gensim.models import Word2Vec
 import time
 from nltk import sent_tokenize
+from senticnet.senticnet import SenticNet
 
 # import matplotlib.pyplot as plt
 
@@ -62,6 +63,7 @@ def my_read(path):
         words.append(line.strip())
     return words
 
+    
 def output_cloud(count,name):
     # 云图
     text = '' 
@@ -244,10 +246,81 @@ def train_sent_dict(datas):
         count[word]['sent_rate'] = value['PD_rate']*value['PD_rate'] * np.sign(value['PD_rate'])
     return count
 
-path = 'labeled_data.xls'
-datas = load_data(path)
-count = train_sent_dict(datas)
-IPython.embed()
+def news2vector(datas,count,bl_sent):
+    for data in tqdm(datas):
+        idx = datas.index(data)
+        tokens = data['tokens']
+        datas[idx]['DsVector'] = [0,0,0,0]
+        datas[idx]['DsVector_rate'] = [0,0,0,0]
+        datas[idx]['SnVector'] = [0,0,0,0]
+        datas[idx]['BlVector'] = [0,0,0,0]
+        datas[idx]['PmiVector'] = [0,0,0,0]
+        datas[idx]['ContextVector'] = [0,0,0,0]
+        
+        # for f in [token for token in tokens if token in sentiment_feature.keys()]:
+        #     for w in sentiment_feature[f].keys():
+        #         if w in tokens:
+        #             if abs(tokens.index(f)-tokens.index(w))<3 and ',' not in data['content'][min(data['content'].index(f),data['content'].index(w)):max(data['content'].index(f),data['content'].index(w))]:
+        #                 if tags[tokens.index(f)][1] in adj:
+        #                     if f in count.keys():
+        #                         datas[idx]['ContextVector'][0] += count[f]['sent']
+        #                 elif tags[tokens.index(f)][1] in adv:
+        #                     if f in count.keys():
+        #                         datas[idx]['ContextVector'][1] += count[f]['sent']
+        #                 if tags[tokens.index(w)][1] in nn:
+        #                     if w in count.keys():
+        #                         datas[idx]['ContextVector'][2] = count[w]['sent']
+        #                 elif tags[tokens.index(w)][1] in vb:
+        #                     if w in count.keys():
+        #                         datas[idx]['ContextVector'][3] = count[w]['sent']
+        #                 # print(sentiment_feature[f][w]['sent'])
+        for tags in data['tags']:
+            for word,tag in tags:
+                if tag in adj:
+                    if word in count.keys():
+                        datas[idx]['DsVector'][0] += count[word]['sent']
+                        datas[idx]['DsVector_rate'][0] += count[word]['sent_rate']
+                        datas[idx]['PmiVector'][0] += count[word]['PMI_sent']
+                    if word in sn.data.keys():
+                        datas[idx]['SnVector'][0] += float(sn.polarity_intense(word))
+                    if word in bl_sent.keys():
+                        datas[idx]['BlVector'][0] += bl_sent[word]
+                elif tag in adv:
+                    if word in count.keys():
+                        datas[idx]['DsVector'][1] += count[word]['sent']
+                        datas[idx]['DsVector_rate'][1] += count[word]['sent_rate']
+                        datas[idx]['PmiVector'][1] += count[word]['PMI_sent']
+                    if word in sn.data.keys():
+                        datas[idx]['SnVector'][1] += float(sn.polarity_intense(word))
+                    if word in bl_sent.keys():
+                        datas[idx]['BlVector'][1] += bl_sent[word]  
+                elif tag in nn:
+                    if word in count.keys():
+                        datas[idx]['DsVector'][2] = count[word]['sent']
+                        datas[idx]['DsVector_rate'][2] += count[word]['sent_rate']
+                        datas[idx]['PmiVector'][2] += count[word]['PMI_sent']
+                    if word in sn.data.keys():
+                        datas[idx]['SnVector'][2] += float(sn.polarity_intense(word))
+                    if word in bl_sent.keys():
+                        datas[idx]['BlVector'][2] += bl_sent[word]
+                elif tag in vb:
+                    if word in count.keys():
+                        datas[idx]['DsVector'][3] = count[word]['sent']
+                        datas[idx]['DsVector_rate'][3] += count[word]['sent_rate']
+                        datas[idx]['PmiVector'][3] += count[word]['PMI_sent']
+                    if word in sn.data.keys():
+                        datas[idx]['SnVector'][3] += float(sn.polarity_intense(word))
+                    if word in bl_sent.keys():
+                        datas[idx]['BlVector'][3] += bl_sent[word]
+        # datas[idx]['DsVector'] = [adv_score,adv_score,noun_score,verb_score]
+
+    
+import pickle
+datas = pickle.load(open('datas.pkl','rb'))
+count = pickle.load(open('sent_dict.pkl', 'rb'))
+
+
+# IPython.embed()
 
 # test sentiment_score accuracy
 # scores = []
@@ -271,26 +344,26 @@ IPython.embed()
 # print('pos',pos_correct/pos_count,pos_count,pos_correct)
 # print('neg',neg_correct/neg_count,neg_count,neg_correct)
 
-path2018 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2018.xls'
-path2019 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2019.xls'
+# path2018 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2018.xls'
+# path2019 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2019.xls'
 
-workbook = xlrd.open_workbook(path2018)
-worksheet = workbook.sheet_by_index(0)
-contents = worksheet.col_values(1)
-companies = worksheet.col_values(2)
-prices = worksheet.col_values(3)
-dates = worksheet.col_values(4)
+# workbook = xlrd.open_workbook(path2018)
+# worksheet = workbook.sheet_by_index(0)
+# contents = worksheet.col_values(1)
+# companies = worksheet.col_values(2)
+# prices = worksheet.col_values(3)
+# dates = worksheet.col_values(4)
 
-rates = []
-score_list = []
+# rates = []
+# score_list = []
 
-for i in tqdm(range(0,len(contents))):
-    rate = []
-    price_list = json.loads(prices[i])
-    for idx in range(0,6):
-      rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
-    rates.append(rate)
-    score_list.append(sentiment_score(contents[i]))
+# for i in tqdm(range(0,len(contents))):
+#     rate = []
+#     price_list = json.loads(prices[i])
+#     for idx in range(0,6):
+#       rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
+#     rates.append(rate)
+#     score_list.append(sentiment_score(contents[i]))
 
 # 合并一天新闻
 # for i in tqdm(range(0,len(contents))):
@@ -306,30 +379,26 @@ for i in tqdm(range(0,len(contents))):
 #     score_list.append(sentiment_score(contents[i]))
 
 ## 情感极性与六天内（包括）新闻涨跌比率的相关度
-fiveday_rate_list = []
-for i in range(0,6):
-   rate = [x[i] for x in rates]
-   data = {
-        'scores':score_list,
-        'rates':rate
-        }
+# fiveday_rate_list = []
+# for i in range(0,6):
+#    rate = [x[i] for x in rates]
+#    data = {
+#         'scores':score_list,
+#         'rates':rate
+#         }
 
-   df = pd.DataFrame(data)
-   # print(df)
-   print(df.corr("kendall"))
-
-
-datas = load_data(path2018)
-count = train_sent_dict(datas)
+#    df = pd.DataFrame(data)
+#    # print(df)
+#    print(df.corr("kendall"))
 
 
 # res = sorted(sent_words.items(),key=lambda sent_words:sent_words[1],reverse=False)
-res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
-for r in res[:100]:
-    print(r[0],r[1]['sent'])
-res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=True)  
-for r in res[:100]:
-    print(r[0],r[1]['sent'])
+# res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
+# for r in res[:100]:
+#     print(r[0],r[1]['sent'])
+# res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=True)  
+# for r in res[:100]:
+#     print(r[0],r[1]['sent'])
 # res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
 # print(res)
 
@@ -345,18 +414,17 @@ for r in res[:100]:
 # output_cloud(pos_words,'pos')
 # output_cloud(neg_words,'neg')
 
-datas = load_data(path2019)
 
 ## 求于bl词典的覆盖率
-bl_sent = {}
-bl_pos = my_read('/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/sentiment_analysis/bl/positive.txt')  # 4783
-bl_neg = my_read('/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/sentiment_analysis/bl/negative.txt')  # 2006
+# bl_sent = {}
+bl_pos = my_read('sentiment_analysis/bl/positive.txt')  # 4783
+bl_neg = my_read('sentiment_analysis/bl/negative.txt')  # 2006
 
 
-for word in bl_pos:
-    bl_sent[word] = 1
-for word in bl_pos:
-    bl_sent[word] = -1
+# for word in bl_pos:
+#     bl_sent[word] = 1
+# for word in bl_pos:
+#     bl_sent[word] = -1
 # pc = 0
 # for word in pos_words:
 #    if word in bl_pos:
@@ -498,7 +566,7 @@ for data in tqdm(datas):
     tokens = data['tokens']
     datas[idx]['DsVector'] = [0,0,0,0]
     datas[idx]['DsVector_rate'] = [0,0,0,0]
-    datas[idx]['SnVector'] = [0,0,0,0]
+    # datas[idx]['SnVector'] = [0,0,0,0]
     datas[idx]['BlVector'] = [0,0,0,0]
     datas[idx]['PmiVector'] = [0,0,0,0]
     datas[idx]['ContextVector'] = [0,0,0,0]
@@ -533,81 +601,35 @@ for data in tqdm(datas):
                     datas[idx]['BlVector'][0] += bl_sent[word]
             elif tag in adv:
                 if word in count.keys():
-                    datas[idx]['SnVector'][1] += count[word]['sent']
+                    datas[idx]['DsVector'][1] += count[word]['sent']
                     datas[idx]['DsVector_rate'][1] += count[word]['sent_rate']
                     datas[idx]['PmiVector'][1] += count[word]['PMI_sent']
-                if word in sn.data.keys():
-                    datas[idx]['SnVector'][1] += float(sn.polarity_intense(word))
-                if word in bl_sent.keys():
-                    datas[idx]['BlVector'][1] += bl_sent[word]  
+                # if word in sn.data.keys():
+                #     datas[idx]['SnVector'][1] += float(sn.polarity_intense(word))
+                # if word in bl_sent.keys():
+                #     datas[idx]['BlVector'][1] += bl_sent[word]  
             elif tag in nn:
                 if word in count.keys():
                     datas[idx]['DsVector'][2] = count[word]['sent']
                     datas[idx]['DsVector_rate'][2] += count[word]['sent_rate']
                     datas[idx]['PmiVector'][2] += count[word]['PMI_sent']
-                if word in sn.data.keys():
-                    datas[idx]['SnVector'][2] += float(sn.polarity_intense(word))
-                if word in bl_sent.keys():
-                    datas[idx]['BlVector'][2] += bl_sent[word]
+                # if word in sn.data.keys():
+                #     datas[idx]['SnVector'][2] += float(sn.polarity_intense(word))
+                # if word in bl_sent.keys():
+                #     datas[idx]['BlVector'][2] += bl_sent[word]
             elif tag in vb:
                 if word in count.keys():
                     datas[idx]['DsVector'][3] = count[word]['sent']
                     datas[idx]['DsVector_rate'][3] += count[word]['sent_rate']
                     datas[idx]['PmiVector'][3] += count[word]['PMI_sent']
-                if word in sn.data.keys():
-                    datas[idx]['SnVector'][3] += float(sn.polarity_intense(word))
-                if word in bl_sent.keys():
-                    datas[idx]['BlVector'][3] += bl_sent[word]
+                # if word in sn.data.keys():
+                #     datas[idx]['SnVector'][3] += float(sn.polarity_intense(word))
+                # if word in bl_sent.keys():
+                #     datas[idx]['BlVector'][3] += bl_sent[word]
     # datas[idx]['DsVector'] = [adv_score,adv_score,noun_score,verb_score]
 
 
-for data in tqdm(datas2):
-    idx = datas2.index(data)
-    tokens = data['tokens']
-    datas2[idx]['DsVector'] = [0,0,0,0]
-    datas2[idx]['DsVector_rate'] = [0,0,0,0]
-    datas2[idx]['SnVector'] = [0,0,0,0]
-    datas2[idx]['BlVector'] = [0,0,0,0]
-    datas2[idx]['PmiVector'] = [0,0,0,0]
-    datas2[idx]['ContextVector'] = [0,0,0,0]
-    for tags in data['tags']:
-        for word,tag in tags:
-            if tag in adj:
-                if word in count.keys():
-                    datas2[idx]['DsVector'][0] += count[word]['sent']
-                    datas2[idx]['DsVector_rate'][0] += count[word]['sent_rate']
-                    datas2[idx]['PmiVector'][0] += count[word]['PMI_sent']
-                if word in sn.data.keys():
-                    datas2[idx]['SnVector'][0] += float(sn.polarity_intense(word))
-                if word in bl_sent.keys():
-                    datas2[idx]['BlVector'][0] += bl_sent[word]
-            elif tag in adv:
-                if word in count.keys():
-                    datas2[idx]['SnVector'][1] += count[word]['sent']
-                    datas2[idx]['DsVector_rate'][1] += count[word]['sent_rate']
-                    datas2[idx]['PmiVector'][1] += count[word]['PMI_sent']
-                if word in sn.data.keys():
-                    datas2[idx]['SnVector'][1] += float(sn.polarity_intense(word))
-                if word in bl_sent.keys():
-                    datas2[idx]['BlVector'][1] += bl_sent[word]  
-            elif tag in nn:
-                if word in count.keys():
-                    datas2[idx]['DsVector'][2] = count[word]['sent']
-                    datas2[idx]['DsVector_rate'][2] += count[word]['sent_rate']
-                    datas2[idx]['PmiVector'][2] += count[word]['PMI_sent']
-                if word in sn.data.keys():
-                    datas2[idx]['SnVector'][2] += float(sn.polarity_intense(word))
-                if word in bl_sent.keys():
-                    datas2[idx]['BlVector'][2] += bl_sent[word]
-            elif tag in vb:
-                if word in count.keys():
-                    datas2[idx]['DsVector'][3] = count[word]['sent']
-                    datas2[idx]['DsVector_rate'][3] += count[word]['sent_rate']
-                    datas2[idx]['PmiVector'][3] += count[word]['PMI_sent']
-                if word in sn.data.keys():
-                    datas2[idx]['SnVector'][3] += float(sn.polarity_intense(word))
-                if word in bl_sent.keys():
-                    datas2[idx]['BlVector'][3] += bl_sent[word]
+IPython.embed()
 
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
@@ -637,7 +659,7 @@ train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0
 # # y_train = Y[:2500]
 # # x_test = X[-300:]
 # # y_test = Y[-300:]
-# clf = GaussianNB()
+clf = GaussianNB()
 clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
 # clf = LinearRegression()
 
@@ -677,21 +699,18 @@ clf = GaussianNB()
 # clf = LinearRegression()
 clf.fit(np.array(train_x), np.array(train_y))
 predict_y = clf.predict(test_x)
+recall = recall_score(test_y,clf.predict(test_x),average = 'macro')
+precision = precision_score(test_y, clf.predict(test_x), average='macro')
+
 print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
-print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
-print('精确率：',precision_score(test_y, clf.predict(test_x), average='macro'))
+print('召回率：',recall)
+print('精确率：',precision)
+print('f1_score',2*recall*precision/(recall+precision))
 
 vote_predict_y = vote(predict_y,datas[-len(test_x):])
 print('投票算法准确率：',accuracy(vote_predict_y,test_y)) 
 
-# import pickle
-# output = open('sent_dict.pkl', 'wb')
-# input = open('sent_dict.pkl', 'rb')
-# s = pickle.dump(count, output)
-# output.close()
-# clf2 = pickle.load(input)
-# input.close()
-# print clf2.predict(X[0:1])
+
 
 # accuracy_scores = 0
 # recall_scores = 0
@@ -812,3 +831,4 @@ for i in range(0,len(labels)):
 for c in cluster:
     if len(c) != 0:
         print(c)
+
