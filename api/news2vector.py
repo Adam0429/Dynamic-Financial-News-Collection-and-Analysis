@@ -52,13 +52,13 @@ def news2vector(news):
 					vector[0] += count[word]['sent_rate']
 			elif tag in adv:
 				if word in count.keys():
-					vector[1] += count[word]['sent']
+					vector[1] += count[word]['sent_rate']
 			elif tag in nn:
 				if word in count.keys():
-					vector[2] = count[word]['sent']
+					vector[2] = count[word]['sent_rate']
 			elif tag in vb:
 				if word in count.keys():
-					vector[3] = count[word]['sent']
+					vector[3] = count[word]['sent_rate']
 	return vector
 
 
