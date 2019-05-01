@@ -19,7 +19,6 @@ for relations in tqdm(_list):
 		stock_prices[relations[0]] = price
 	except:
 		pass
-print(len(stock_prices.keys()))
 
 
 def recent_price(stockname,start_time):
@@ -85,6 +84,13 @@ for idx in tqdm(range(0,len(titles))):
 					outws.cell(count, 2).value = contents[idx]
 					outws.cell(count, 3).value = relations[1]
 					outws.cell(count, 4).value = str(recent_prices)
+					outws.cell(count, 5).value = dates[idx]
+					count += 1
+				else:
+					outws.cell(count, 1).value = titles[idx]
+					outws.cell(count, 2).value = contents[idx]
+					outws.cell(count, 3).value = relations[1]
+					outws.cell(count, 4).value = 'None'
 					outws.cell(count, 5).value = dates[idx]
 					count += 1
 				break

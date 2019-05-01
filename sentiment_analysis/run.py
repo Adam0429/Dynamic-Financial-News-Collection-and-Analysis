@@ -13,14 +13,15 @@ from gensim.models import Word2Vec
 import time
 from nltk import sent_tokenize
 from senticnet.senticnet import SenticNet
-
+from wordcloud import WordCloud
+import datetime
 # import matplotlib.pyplot as plt
-
 adj = ['JJ','JJR','JJS']
 adv = ['RB','RBR','RBS']
 vb = ['VB','VBD','VBG','VBN','VBP','VBZ']
 nn = ['NN','NNS']
 
+sn = SenticNet()
 
 def review_to_words(review_text): 
     if '(Reuters) -' in review_text:
@@ -81,29 +82,51 @@ def output_cloud(count,name):
     wc.to_file(name+'.png') #图片保存
 
 
+
 def vote(results,datas):
-    if len(results) != len(datas):
-        raise Exception("error")
+    if len(datas) != len(results):
+        raise("vote error")
+    vote_dict = {}
+    date_set = set([data['date'] for data in datas])
+    company_set = set([data['company'] for data in datas])
+    for company in company_set:
+        vote_dict[company] = {}
+        for date in date_set:
+            vote_dict[company][date] = set()
+    for idx in range(0,len(datas)):
+        date = datas[idx]['date']
+        company = datas[idx]['company']         
+        vote_dict[company][date].add(idx)
+        
     new_results = []
+    print('voting')
     for i in range(0,len(results)):
         count = 0
         company = datas[i]['company']
         date = datas[i]['date']
-        for data in datas:
-            if data['company'] == company and data['date'] == date:
-                idx = datas.index(data)
-                # if idx!=i:
-                #     print(i)
-                #     print(idx)
-                #     print('========')
-                count += results[idx]
+        for idx in vote_dict[company][date]:
+            count += results[idx]
         if count < 0:  
             new_results.append(np.float64(-1))
         else:
             new_results.append(np.float64(1))
     return np.array(new_results)
 
+def time_fun(date,day):
+    st = datetime.datetime.strptime(date, '%Y-%m-%d')
+    et = st - datetime.timedelta(days=day)
+    return et.strftime("%Y-%m-%d")
+
 def accuracy(y,y2):
+    if len(y) != len(y2):
+        raise Exception("error")
+    count = 0
+    for i in range(0,len(y)):
+        if y[i] == y2[i]:
+            count += 1
+    return count/len(y2)
+
+def recall(y,y2):
     if len(y) != len(y2):
         raise Exception("error")
     count = 0
@@ -135,6 +158,7 @@ def sentiment_score(text):
     # if count == 0: #mid
     #   return -1 
     # return score/count
+    
 def load_data(path):
     workbook = xlrd.open_workbook(path)
     worksheet = workbook.sheet_by_index(0)
@@ -177,7 +201,7 @@ def train_sent_dict(datas):
 
     N = 0 #len of tokens
         
-    for data in tqdm(datas):
+    for data in datas:
         for tokens in data['tokens']: 
             N += len(tokens)
             rate = data['rate'] # 选当天的股票变化判断涨跌，因为相关度当天的最高
@@ -216,8 +240,8 @@ def train_sent_dict(datas):
     freq_neg = neg_count/len(datas)
 
     # DS sent and PMI sent
-    for word,value in tqdm(copy.items()):
-        if value['pos']+value['neg']<2000:
+    for word,value in copy.items():
+        if value['pos']+value['neg']<len(datas)/100:
             del count[word]
             continue
         freq_w_pos = value['pos']/len(datas)
@@ -246,10 +270,9 @@ def train_sent_dict(datas):
         count[word]['sent_rate'] = value['PD_rate']*value['PD_rate'] * np.sign(value['PD_rate'])
     return count
 
+
 def news2vector(datas,count,bl_sent):
-    for data in tqdm(datas):
-        idx = datas.index(data)
-        tokens = data['tokens']
+    for idx in range(0,len(datas)):    
         datas[idx]['DsVector'] = [0,0,0,0]
         datas[idx]['DsVector_rate'] = [0,0,0,0]
         datas[idx]['SnVector'] = [0,0,0,0]
@@ -257,24 +280,8 @@ def news2vector(datas,count,bl_sent):
         datas[idx]['PmiVector'] = [0,0,0,0]
         datas[idx]['ContextVector'] = [0,0,0,0]
         
-        # for f in [token for token in tokens if token in sentiment_feature.keys()]:
-        #     for w in sentiment_feature[f].keys():
-        #         if w in tokens:
-        #             if abs(tokens.index(f)-tokens.index(w))<3 and ',' not in data['content'][min(data['content'].index(f),data['content'].index(w)):max(data['content'].index(f),data['content'].index(w))]:
-        #                 if tags[tokens.index(f)][1] in adj:
-        #                     if f in count.keys():
-        #                         datas[idx]['ContextVector'][0] += count[f]['sent']
-        #                 elif tags[tokens.index(f)][1] in adv:
-        #                     if f in count.keys():
-        #                         datas[idx]['ContextVector'][1] += count[f]['sent']
-        #                 if tags[tokens.index(w)][1] in nn:
-        #                     if w in count.keys():
-        #                         datas[idx]['ContextVector'][2] = count[w]['sent']
-        #                 elif tags[tokens.index(w)][1] in vb:
-        #                     if w in count.keys():
-        #                         datas[idx]['ContextVector'][3] = count[w]['sent']
-        #                 # print(sentiment_feature[f][w]['sent'])
-        for tags in data['tags']:
+        
+        for tags in datas[idx]['tags']:
             for word,tag in tags:
                 if tag in adj:
                     if word in count.keys():
@@ -312,60 +319,68 @@ def news2vector(datas,count,bl_sent):
                         datas[idx]['SnVector'][3] += float(sn.polarity_intense(word))
                     if word in bl_sent.keys():
                         datas[idx]['BlVector'][3] += bl_sent[word]
+
+def news2vector2(datas,count,bl_sent):
+    for idx in range(0,len(datas)):
+        datas[idx]['DsVector_rate'] = [0,0,0,0]
+        for tags in datas[idx]['tags']:
+            for word,tag in tags:
+                if tag in adj:
+                    if word in count.keys():
+                        datas[idx]['DsVector_rate'][0] += count[word]['sent_rate']
+
+                elif tag in adv:
+                    if word in count.keys():
+                        datas[idx]['DsVector_rate'][1] += count[word]['sent_rate']
+
+                elif tag in nn:
+                    if word in count.keys():
+                        datas[idx]['DsVector_rate'][2] += count[word]['sent_rate']
+
+                elif tag in vb:
+                    if word in count.keys():
+                        datas[idx]['DsVector_rate'][3] += count[word]['sent_rate']
         # datas[idx]['DsVector'] = [adv_score,adv_score,noun_score,verb_score]
 
-    
 import pickle
-datas = pickle.load(open('datas.pkl','rb'))
-count = pickle.load(open('sent_dict.pkl', 'rb'))
+datas = pickle.load(open('/home/stocksentiment/datas.pkl','rb'))
+count = pickle.load(open('/home/stocksentiment/sent_dict.pkl', 'rb'))
+print('load finish')
 
+path = r'~/Dynamic-Financial-News-Collection-and-Analysis/labeled_data.xls'
 
-# IPython.embed()
+# datas = load_data(path)
+# count = train_sent_dict(datas)
 
-# test sentiment_score accuracy
-# scores = []
-# workbook = pd.read_csv(u'sentiment.csv',encoding='ISO-8859-1')
-# correct = 0
-# pos_count = 0
-# neg_count = 0
-# pos_correct = 0
-# neg_correct = 0
+# import pickle
+# output = open('sent_dict.pkl', 'wb')
+# input = open('sent_dict.pkl', 'rb')
+# s = pickle.dump(count, output)
+# output.close()
+# clf2 = pickle.load(input)
+# input.close()
+# print clf2.predict(X[0:1])
 
-# for i in tqdm(range(0,10000)):
-#   i = int(random.random()*1599999)
-#   if workbook.loc[i][0] == 0:
-#    neg_count += 1
-#    if workbook.loc[i][0] == sentiment_score_list(workbook.loc[i][5]):
-#     neg_correct += 1
-#   elif workbook.loc[i][0] == 4:
-#    pos_count += 1
-#    if workbook.loc[i][0] == sentiment_score_list(workbook.loc[i][5]):
-#     pos_correct += 1
-# print('pos',pos_correct/pos_count,pos_count,pos_correct)
-# print('neg',neg_correct/neg_count,neg_count,neg_correct)
+## 新闻情感值和股价的相关度
+workbook = xlrd.open_workbook(path)
+worksheet = workbook.sheet_by_index(0)
+contents = worksheet.col_values(1)
+companies = worksheet.col_values(2)
+prices = worksheet.col_values(3)
+dates = worksheet.col_values(4)
 
-# path2018 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2018.xls'
-# path2019 = r'/Users/wangfeihong/Desktop/Dynamic-Financial-News-Collection-and-Analysis/data/labeled_data2019.xls'
+rates = []
+score_list = []
 
-# workbook = xlrd.open_workbook(path2018)
-# worksheet = workbook.sheet_by_index(0)
-# contents = worksheet.col_values(1)
-# companies = worksheet.col_values(2)
-# prices = worksheet.col_values(3)
-# dates = worksheet.col_values(4)
-
-# rates = []
-# score_list = []
-
-# for i in tqdm(range(0,len(contents))):
-#     rate = []
-#     price_list = json.loads(prices[i])
-#     for idx in range(0,6):
-#       rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
-#     rates.append(rate)
-#     score_list.append(sentiment_score(contents[i]))
-
-# 合并一天新闻
+for i in range(0,len(contents)):
+    rate = []
+    price_list = json.loads(prices[i])
+    for idx in range(0,6):
+        rate.append((price_list[idx+1]-price_list[idx])/price_list[idx])
+    rates.append(rate)
+    score_list.append(sentiment_score(contents[i]))
+    
+## 合并一天新闻
 # for i in tqdm(range(0,len(contents))):
 #     rate = []
 #     price_list = json.loads(prices[i])
@@ -378,53 +393,222 @@ count = pickle.load(open('sent_dict.pkl', 'rb'))
 #     rates.append(rate)
 #     score_list.append(sentiment_score(contents[i]))
 
-## 情感极性与六天内（包括）新闻涨跌比率的相关度
-# fiveday_rate_list = []
-# for i in range(0,6):
-#    rate = [x[i] for x in rates]
-#    data = {
-#         'scores':score_list,
-#         'rates':rate
-#         }
+# 情感极性与六天内（包括）新闻涨跌比率的相关度
 
-#    df = pd.DataFrame(data)
-#    # print(df)
-#    print(df.corr("kendall"))
+# 股票与新闻情感相关性
+fiveday_rate_list = []
+for i in range(0,6):
+    rate = [x[i] for x in rates]
+    data = {
+        'scores':score_list,
+        'rates':rate
+        }
+
+    df = pd.DataFrame(data)
+   # print(df)
+    print(df.corr("kendall"))
+
+# wordvec
+tokens = []
+for data in datas:
+    for ts in data['tokens']:
+        tokens.append(ts)
+model = Word2Vec(sentences = tokens,min_count = 10)
+
+from nltk.tokenize import WordPunctTokenizer  
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn import model_selection
+from sklearn.naive_bayes import GaussianNB
+import xlrd,xlwt
+import numpy as np
+# import spacy
+from gensim.models import Word2Vec
+from tqdm import tqdm
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout
+from keras.utils import to_categorical
+
+sentences = [data['content'] for data in datas]
+
+bag_of_keywords = set(['fail', 'success', 'win', 'drop', 'rise', 'shrink', 'jump', 'gain', 'down', 'up'])
+stop = False
+bok_size = 100
+for i in range(10):
+    new_words = []
+    if stop:break
+    for k in bag_of_keywords:
+        if k in model.wv.vocab.keys():# wv = wordvector
+            new_words.extend(model.most_similar(k))
+for n in new_words:
+    if n[0].islower() and len(n[0])>3 and n[0].isalpha():
+        bag_of_keywords.add(n[0])
+        if len(bag_of_keywords) == bok_size:
+            stop = True
+            break
+
+'''fit():计算数据的参数，\mu（均值），\sigma（标准差），并存储在对象中（例如实例化的CountVectorizer()等）。
+transform():将这些参数应用到数据集，进行标准化（尺度化）。'''
+
+## Bag of keywords 统计词语的两个api
+bag_of_keywords = np.array(list(bag_of_keywords))
+bok_tfidf = TfidfVectorizer(lowercase = False, min_df = 1, vocabulary=bag_of_keywords)
+X_bok_tfidf = bok_tfidf.fit_transform(sentences)
+X_bok_tfidf = X_bok_tfidf.toarray()
+
+## Category tag
+category_tags = set(['published','presented','unveil','investment','bankrupt','acquisition','government'
+                     'sue','lawsuit','highlights'])
+stop = False
+cate_size = 100
+
+for _ in range(10):
+    new_words = []
+    if stop:break
+    for k in category_tags:
+        if k in model.wv.vocab.keys():
+            new_words.extend(model.most_similar(k))
+    for n in new_words:
+        if n[0].islower() and len(n[0])>3 and n[0].isalpha():
+            category_tags.add(n[0])
+            if len(category_tags) == cate_size:
+                stop = True
+                break
 
 
-# res = sorted(sent_words.items(),key=lambda sent_words:sent_words[1],reverse=False)
-# res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=False)
-# for r in res[:100]:
-#     print(r[0],r[1]['sent'])
-# res = sorted(count.items(),key=lambda count:count[1]['sent'],reverse=True)  
-# for r in res[:100]:
-#     print(r[0],r[1]['sent'])
-# res = sorted(count.items(),key=lambda count:count[1]['PD'],reverse=True)
-# print(res)
+category_tags = np.array(list(category_tags))
 
-## neg pos 词
-# pos_words = {}
-# neg_words = {}
-# for word in sent_words:
-#    if count[word]['sent'] > 0:
-#       pos_words[word.lower()] = count[word]['pos']+count[word]['neg']
-#    else:
-#       neg_words[word.lower()] = count[word]['pos']+count[word]['neg']
+ct_tfidf = TfidfVectorizer(lowercase = False, min_df = 1, vocabulary = category_tags)
+X_ct_idf = ct_tfidf.fit_transform(sentences)
+X_ct_idf = X_ct_idf.toarray()
 
-# output_cloud(pos_words,'pos')
-# output_cloud(neg_words,'neg')
+full_tfidf = TfidfVectorizer(lowercase=False, min_df = 1,vocabulary=bag_of_keywords,use_idf=False)
+X_full_tfidf = full_tfidf.fit_transform(sentences)
+X_full_tfidf = X_full_tfidf.toarray()
 
+# x_bok RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LinearRegression
+from sklearn import model_selection
+from sklearn.model_selection import KFold
+from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import mean_absolute_error
+from sklearn.ensemble import RandomForestClassifier
+from keras.utils import to_categorical
+import matplotlib.pyplot as plt
+
+print('X_bok_tfidf')
+X = X_bok_tfidf
+train_x,test_x,train_y,test_y=model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+# clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+print('accuracy：',clf.score(np.array(test_x), np.array(test_y))) 
+print('recall：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+print('precision：',precision_score(test_y, clf.predict(test_x), average='macro'))
+    
+print('X_ct_idf')
+X = X_ct_idf
+train_x,test_x,train_y,test_y=model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+# clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+print('accuracy：',clf.score(np.array(test_x), np.array(test_y))) 
+print('recall：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+print('accuracy：',precision_score(test_y, clf.predict(test_x), average='macro'))
+
+print('X_full_tfidf')
+X = X_full_tfidf
+train_x,test_x,train_y,test_y=model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+# clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+print('accuracy：',clf.score(np.array(test_x), np.array(test_y))) 
+print('recall：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+print('accuracy：',precision_score(test_y, clf.predict(test_x), average='macro'))
+
+
+# x_bok RandomForestClassifier
+print('X_bok_tfidf')
+X = X_bok_tfidf
+train_x,test_x,train_y,test_y=model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+clf = GaussianNB()
+# clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+print('accuracy：',clf.score(np.array(test_x), np.array(test_y))) 
+print('recall：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+print('precision：',precision_score(test_y, clf.predict(test_x), average='macro'))
+
+vote_predict_y = vote(predict_y,datas[-len(test_x):])
+vote_recall = recall_score(test_y,vote_predict_y,average = 'macro')
+vote_precision = precision_score(test_y, vote_predict_y, average='macro')
+
+    
+print('X_ct_idf')
+X = X_ct_idf
+train_x,test_x,train_y,test_y=model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+# clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+print('accuracy：',clf.score(np.array(test_x), np.array(test_y))) 
+print('recall：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+print('accuracy：',precision_score(test_y, clf.predict(test_x), average='macro'))
+
+print('')
+
+print('X_full_tfidf')
+X = X_full_tfidf
+train_x,test_x,train_y,test_y=model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+# clf = LinearRegression()
+clf.fit(np.array(train_x), np.array(train_y))
+predict_y = clf.predict(test_x)
+print('accuracy：',clf.score(np.array(test_x), np.array(test_y))) 
+print('recall：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
+print('accuracy：',precision_score(test_y, clf.predict(test_x), average='macro'))
+
+# neg pos 词
+pos_words = {}
+neg_words = {}
+for word in sent_words:
+   if count[word]['sent'] > 0:
+      pos_words[word.lower()] = count[word]['pos']+count[word]['neg']
+   else:
+      neg_words[word.lower()] = count[word]['pos']+count[word]['neg']
+
+output_cloud(pos_words,'pos')
+output_cloud(neg_words,'neg')
+
+# neg pos 词
+pos_words = {}
+neg_words = {}
+for word in count.keys():
+   if count[word]['sent'] > 0:
+      pos_words[word.lower()] = count[word]['pos']+count[word]['neg']
+   else:
+      neg_words[word.lower()] = count[word]['pos']+count[word]['neg']
+
+output_cloud(pos_words,'pos')
+output_cloud(neg_words,'neg')
 
 ## 求于bl词典的覆盖率
-# bl_sent = {}
-bl_pos = my_read('sentiment_analysis/bl/positive.txt')  # 4783
-bl_neg = my_read('sentiment_analysis/bl/negative.txt')  # 2006
+bl_sent = {}
+bl_pos = my_read('/home/stocksentiment/Dynamic-Financial-News-Collection-and-Analysis/sentiment_analysis/bl/positive.txt')  # 4783
+bl_neg = my_read('/home/stocksentiment/Dynamic-Financial-News-Collection-and-Analysis/sentiment_analysis/bl/negative.txt')  # 2006
 
 
-# for word in bl_pos:
-#     bl_sent[word] = 1
-# for word in bl_pos:
-#     bl_sent[word] = -1
+for word in bl_pos:
+    bl_sent[word] = 1
+for word in bl_pos:
+    bl_sent[word] = -1
 # pc = 0
 # for word in pos_words:
 #    if word in bl_pos:
@@ -436,7 +620,6 @@ bl_neg = my_read('sentiment_analysis/bl/negative.txt')  # 2006
 #    if word in bl_neg:
 #       nc += 1
 # neg_accuracy = nc/len(neg_words)  # 0.18
-
 ## context sentiment dict
 # sent_words = [word.lower() for word in sent_words]
 # feature_words = {}
@@ -559,77 +742,11 @@ bl_neg = my_read('sentiment_analysis/bl/negative.txt')  # 2006
 #    if value['pos']+value['neg'] > avg_sf:
 #       print(sf,freq)
 
-# Predict
-# content to vector
-for data in tqdm(datas):
-    idx = datas.index(data)
-    tokens = data['tokens']
-    datas[idx]['DsVector'] = [0,0,0,0]
-    datas[idx]['DsVector_rate'] = [0,0,0,0]
-    # datas[idx]['SnVector'] = [0,0,0,0]
-    datas[idx]['BlVector'] = [0,0,0,0]
-    datas[idx]['PmiVector'] = [0,0,0,0]
-    datas[idx]['ContextVector'] = [0,0,0,0]
-    
-    # for f in [token for token in tokens if token in sentiment_feature.keys()]:
-    #     for w in sentiment_feature[f].keys():
-    #         if w in tokens:
-    #             if abs(tokens.index(f)-tokens.index(w))<3 and ',' not in data['content'][min(data['content'].index(f),data['content'].index(w)):max(data['content'].index(f),data['content'].index(w))]:
-    #                 if tags[tokens.index(f)][1] in adj:
-    #                     if f in count.keys():
-    #                         datas[idx]['ContextVector'][0] += count[f]['sent']
-    #                 elif tags[tokens.index(f)][1] in adv:
-    #                     if f in count.keys():
-    #                         datas[idx]['ContextVector'][1] += count[f]['sent']
-    #                 if tags[tokens.index(w)][1] in nn:
-    #                     if w in count.keys():
-    #                         datas[idx]['ContextVector'][2] = count[w]['sent']
-    #                 elif tags[tokens.index(w)][1] in vb:
-    #                     if w in count.keys():
-    #                         datas[idx]['ContextVector'][3] = count[w]['sent']
-    #                 # print(sentiment_feature[f][w]['sent'])
-    for tags in data['tags']:
-        for word,tag in tags:
-            if tag in adj:
-                if word in count.keys():
-                    datas[idx]['DsVector'][0] += count[word]['sent']
-                    datas[idx]['DsVector_rate'][0] += count[word]['sent_rate']
-                    datas[idx]['PmiVector'][0] += count[word]['PMI_sent']
-                if word in sn.data.keys():
-                    datas[idx]['SnVector'][0] += float(sn.polarity_intense(word))
-                if word in bl_sent.keys():
-                    datas[idx]['BlVector'][0] += bl_sent[word]
-            elif tag in adv:
-                if word in count.keys():
-                    datas[idx]['DsVector'][1] += count[word]['sent']
-                    datas[idx]['DsVector_rate'][1] += count[word]['sent_rate']
-                    datas[idx]['PmiVector'][1] += count[word]['PMI_sent']
-                # if word in sn.data.keys():
-                #     datas[idx]['SnVector'][1] += float(sn.polarity_intense(word))
-                # if word in bl_sent.keys():
-                #     datas[idx]['BlVector'][1] += bl_sent[word]  
-            elif tag in nn:
-                if word in count.keys():
-                    datas[idx]['DsVector'][2] = count[word]['sent']
-                    datas[idx]['DsVector_rate'][2] += count[word]['sent_rate']
-                    datas[idx]['PmiVector'][2] += count[word]['PMI_sent']
-                # if word in sn.data.keys():
-                #     datas[idx]['SnVector'][2] += float(sn.polarity_intense(word))
-                # if word in bl_sent.keys():
-                #     datas[idx]['BlVector'][2] += bl_sent[word]
-            elif tag in vb:
-                if word in count.keys():
-                    datas[idx]['DsVector'][3] = count[word]['sent']
-                    datas[idx]['DsVector_rate'][3] += count[word]['sent_rate']
-                    datas[idx]['PmiVector'][3] += count[word]['PMI_sent']
-                # if word in sn.data.keys():
-                #     datas[idx]['SnVector'][3] += float(sn.polarity_intense(word))
-                # if word in bl_sent.keys():
-                #     datas[idx]['BlVector'][3] += bl_sent[word]
-    # datas[idx]['DsVector'] = [adv_score,adv_score,noun_score,verb_score]
+news2vector(datas,count,bl_sent)
 
-
-IPython.embed()
+output = open('datas.pkl', 'wb')
+pickle.dump(datas, output)
+print('dump finish')
 
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
@@ -642,193 +759,368 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.ensemble import RandomForestClassifier
 from keras.utils import to_categorical
 import matplotlib.pyplot as plt
+# RandomForest
+X1 = [data['DsVector'] for data in datas]
+X2 = [data['SnVector'] for data in datas]
+X3 = [data['BlVector'] for data in datas]
+X4 = [data['PmiVector'] for data in datas]
+X5 = [data['DsVector_rate'] for data in datas]
 
-X = [data['DsVector'] for data in datas]
-X = [data['SnVector'] for data in datas]
-# X = [data['BlVector'] for data in datas]
-# X = [data['PmiVector'] for data in datas]
-# X = [data['ContextVector'] for data in datas]
-X = [data['DsVector_rate'] for data in datas]
+Xs = {'DsVector':X1,'SnVector':X2,'BlVector':X3,'PmiVector':X4,'DsVector_rate':X5}
+
 Y = [np.sign(data['rate']) for data in datas]
-# Y = [data['rate'] for data in datas]
+for vectorname in Xs.keys():
+    print(vectorname+'==============')
+    X = Xs[vectorname]
+    train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
 
+    clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
 
-train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+    clf.fit(np.array(train_x), np.array(train_y))
 
-# # x_train = X[:2500]
-# # y_train = Y[:2500]
-# # x_test = X[-300:]
-# # y_test = Y[-300:]
-clf = GaussianNB()
-clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
-# clf = LinearRegression()
+    predict_y = clf.predict(test_x)
+    recall = recall_score(test_y,clf.predict(test_x),average = 'macro')
+    precision = precision_score(test_y, clf.predict(test_x), average='macro')
 
-clf.fit(np.array(train_x), np.array(train_y))
-predict_y = clf.predict(test_x)
+    print('accuracy：',clf.score(np.array(test_x), np.array(test_y))) 
+    print('recall：',recall)
+    print('precision：',precision)
+    print('f1_score',2*recall*precision/(recall+precision))
 
-print('准确率：',clf.score(np.array(test_x), np.array(test_y)))
-print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
-print('精确率：',precision_score(test_y, predict_y, average='macro'))
-# print('MAE：',mean_absolute_error(test_y, predict_y))
+    vote_predict_y = vote(predict_y,datas[-len(test_x):])
+    vote_recall = recall_score(test_y,vote_predict_y,average = 'macro')
+    vote_precision = precision_score(test_y, vote_predict_y, average='macro')
 
-vote_predict_y = vote(predict_y,datas[-len(test_x):])
-print('投票算法准确率：',accuracy(vote_predict_y,test_y)) 
+    print('voting accuracy：',accuracy(vote_predict_y,test_y))
+    print('voting recall：',vote_recall)
+    print('voting precision：',vote_precision)
+    print('voting f1_score',2*vote_recall*vote_precision/(vote_recall+vote_precision))
+    print('')
 
-train_x = [data['DsVector_rate'] for data in datas]
-train_y = [np.sign(data['rate']) for data in datas]
-test_x = [data['DsVector_rate'] for data in datas2[2000:]]
-test_y = [np.sign(data['rate']) for data in datas2[2000:]]
-# clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
-clf = GaussianNB()
-# clf = LinearRegression()
-clf.fit(np.array(train_x), np.array(train_y))
-predict_y = clf.predict(test_x)
-print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
-print('召回率：',recall_score(test_y,clf.predict(test_x),average = 'macro'))
-print('精确率：',precision_score(test_y, predict_y, average='macro'))
+# GaussianNB
+for vectorname in Xs.keys():
+    print(vectorname+'==============')
+    X = Xs[vectorname]
+    train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
 
-vote_predict_y = vote(predict_y,datas[-len(test_x):])
-print('投票算法准确率：',accuracy(vote_predict_y,test_y)) 
+    clf = GaussianNB()
 
-# company
-train_x = [data['DsVector_rate'] for data in datas]
-train_y = [np.sign(data['rate']) for data in datas]
-test_x = [data['DsVector_rate'] for data in datas2 if data['company'] =='Apple Inc.']
-test_y = [np.sign(data['rate']) for data in datas2 if data['company'] =='Apple Inc.']
-clf = GaussianNB()
-# clf = LinearRegression()
-clf.fit(np.array(train_x), np.array(train_y))
-predict_y = clf.predict(test_x)
-recall = recall_score(test_y,clf.predict(test_x),average = 'macro')
-precision = precision_score(test_y, clf.predict(test_x), average='macro')
+    clf.fit(np.array(train_x), np.array(train_y))
 
-print('准确率：',clf.score(np.array(test_x), np.array(test_y))) 
-print('召回率：',recall)
-print('精确率：',precision)
-print('f1_score',2*recall*precision/(recall+precision))
+    predict_y = clf.predict(test_x)
+    recall = recall_score(test_y,clf.predict(test_x),average = 'macro')
+    precision = precision_score(test_y, clf.predict(test_x), average='macro')
 
-vote_predict_y = vote(predict_y,datas[-len(test_x):])
-print('投票算法准确率：',accuracy(vote_predict_y,test_y)) 
+    print('accuracy：',clf.score(np.array(test_x), np.array(test_y))) 
+    print('recall：',recall)
+    print('precision：',precision)
+    print('f1_score',2*recall*precision/(recall+precision))
 
+    vote_predict_y = vote(predict_y,datas[-len(test_x):])
+    vote_recall = recall_score(test_y,vote_predict_y,average = 'macro')
+    vote_precision = precision_score(test_y, vote_predict_y, average='macro')
 
-
-# accuracy_scores = 0
-# recall_scores = 0
-# precision_scores = 0
-# f1_scores = 0
-# kf = KFold(n_splits=10,shuffle=False)
-# for train_index, test_index in kf.split(X):
-#     train_x = []
-#     train_y = []
-#     test_x = []
-#     test_y = []
-#     for index in train_index:
-#         train_x.append(X[index])
-#         train_y.append(Y[index])
-#     for index in test_index:
-#         test_x.append(X[index])
-#         test_y.append(Y[index])
-
-#     train_x = np.array(train_x)
-#     train_y = np.array(train_y)
-#     test_x = np.array(test_x)
-#     test_y = np.array(test_y)
-#     clf = GaussianNB()
-#     clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
-#     # clf = LinearRegression()
-#     clf.fit(train_x, train_y)
-#     predict_y = clf.predict(test_x)
-#     accuracy = clf.score(test_x, test_y)
-#     accuracy_scores += accuracy
-#     recall = recall_score(test_y,predict_y,average = 'macro')
-#     recall_scores += recall
-#     precision = precision_score(test_y, predict_y, average='macro')
-#     precision_scores += precision
-#     f1 = f1_score(test_y,predict_y,average = 'macro')
-#     f1_scores += f1
-
-# plt.scatter([idx for idx in range(0,500)],predict_y[:500],c='blue')
-# plt.scatter([idx for idx in range(0,500)],test_y[:500] ,c='red')
-# plt.show()
-
-# ax = plt.gca()
-# ax.set_xlabel('x')
-# ax.set_ylabel('y')
-# ax.plot([idx for idx in range(0,100)],predict_y[:100],c='blue')
-# ax.plot([idx for idx in range(0,100)],test_y[:100] ,c='red')
-# plt.show()
-
-# print('准确率：',accuracy_scores/10)
-# print('召回率：',recall_scores/10)
-# print('精确率：',precision_scores/10)
-# print('F-measure：',f1_scores/10)
-
+    print('voting accuracy：',accuracy(vote_predict_y,test_y))
+    print('voting recall：',vote_recall)
+    print('voting precision：',vote_precision)
+    print('voting f1_score',2*vote_recall*vote_precision/(vote_recall+vote_precision))
+    print('')
 
 # dnn
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.utils import to_categorical
 
-
-train_x = [data['DsVector_rate'] for data in datas]
 Y = [np.sign(data['rate']) for data in datas]
-test_x = [data['DsVector_rate'] for data in datas2[2000:]]
-Y2 = [np.sign(data['rate']) for data in datas2[2000:]]
+for vectorname in Xs.keys():
+    print(vectorname+'==============')
+    X = Xs[vectorname]
+    train_x,test_x,Y1,Y2 = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+    # train_x = [data['DsVector_rate'] for data in datas]
+    # Y = [np.sign(data['rate']) for data in datas]
+    # test_x = [data['DsVector_rate'] for data in datas2[2000:]]
+    # Y2 = [np.sign(data['rate']) for data in datas2[2000:]]
+
+    train_y = []
+    for y in Y1:
+        if y == 1:
+            train_y.append(np.array([0,1]))
+        else:    
+            train_y.append(np.array([1,0]))
+
+    test_y = []
+    for y in Y2:
+        if y == 1:
+            test_y.append(np.array([0,1]))
+        else:    
+            test_y.append(np.array([1,0]))
+
+    num_classes = 2
+    
+#     train_y = to_categorical(train_y,num_classes=num_classes)
+#     test_y = to_categorical(test_y,num_classes=num_classes)
+    nmodel = Sequential()
+    nmodel.add(Dense(units=num_classes, activation = 'relu', input_dim = np.array(train_x).shape[1]))
+    nmodel.add(Dropout(0.5))
+    nmodel.add(Dense(2, activation = 'relu'))
+    nmodel.add(Dropout(0.5))
+    # dropout:https://blog.csdn.net/program_developer/article/details/80737724
+    nmodel.add(Dense(2, activation = 'softmax'))
+    nmodel.compile(loss = 'categorical_crossentropy',
+                   optimizer = 'adam',
+                   metrics = ['accuracy'])
+    nmodel.fit(np.array(train_x),np.array(train_y),epochs=10, batch_size=5)
+    print(nmodel.evaluate(np.array(test_x),np.array(test_y), batch_size=5))
+
+## rnn preprocessing
+rnn_dict = {}
+date_set = set([data['date'] for data in datas])
+company_set = set([data['company'] for data in datas])
+for company in company_set:
+    rnn_dict[company] = {}
+    for date in date_set:
+        rnn_dict[company][date] = set()
+for idx in range(0,len(datas)):
+    date = datas[idx]['date']
+    company = datas[idx]['company']         
+    rnn_dict[company][date].add(idx)
+
+res = sorted(apple_dict.items(),key=lambda apple_dict:apple_dict[0],reverse=True)
+
+for idx in tqdm(range(0,len(datas))):
+    date = datas[idx]['date']
+    company = datas[idx]['company']
+    datas[idx]['rnn_vector'] = []
+    for i in range(0,3):
+        average_vector = []
+        try:
+            day_vector = rnn_dict[company][time_fun(date,i)]
+        except:
+            datas[idx]['rnn_vector'].append([0,0,0,0])
+            continue
+        vector0 = [datas[data_idx]['DsVector_rate'][0] for data_idx in day_vector]
+        vector1 = [datas[data_idx]['DsVector_rate'][1] for data_idx in day_vector]
+        vector2 = [datas[data_idx]['DsVector_rate'][2] for data_idx in day_vector]
+        vector3 = [datas[data_idx]['DsVector_rate'][3] for data_idx in day_vector]
+        try:
+            average_vector.append(sum(vector0)/len(day_vector)) 
+        except:
+            average_vector.append(0)
+        try:
+            average_vector.append(sum(vector1)/len(day_vector)) 
+        except:
+            average_vector.append(0)
+        try:
+            average_vector.append(sum(vector2)/len(day_vector)) 
+        except:
+            average_vector.append(0)
+        try:
+            average_vector.append(sum(vector3)/len(day_vector)) 
+        except:
+            average_vector.append(0)
+        datas[idx]['rnn_vector'].append(average_vector)
+            
+# rnn
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout
+from keras.utils import to_categorical
+from keras.layers import LSTM
 
 
+X = [data['rnn_vector'] for data in datas]
+Y = [np.sign(data['rate']) for data in datas]
+    
+X = np.array(X)
+# X = np.concatenate(X, axis=0)
+
+train_x,test_x,Y1,Y2 = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
 
 train_y = []
-for y in Y:
+for y in Y1:
     if y == 1:
-        train_y.append(np.array([0,1]))
+        train_y.append([0,1])
     else:    
-        train_y.append(np.array([1,0]))
+        train_y.append([1,0])
 
 test_y = []
 for y in Y2:
     if y == 1:
-        test_y.append(np.array([0,1]))
+        test_y.append([0,1])
     else:    
-        test_y.append(np.array([1,0]))
+        test_y.append([1,0])
 
 num_classes = 2
-# test_y = to_categorical(Y,num_classes=3)
+neurons = 2                 
+activation_function = 'tanh'  
+loss = 'mse'                  
+optimizer="adam"              
+dropout = 0.25                 
+batch_size = 12               
+epochs = 53
 
-nmodel = Sequential()
-nmodel.add(Dense(units=num_classes, activation = 'relu', input_dim = np.array(train_x).shape[1]))
-nmodel.add(Dropout(0.5))
-nmodel.add(Dense(2, activation = 'relu'))
-nmodel.add(Dropout(0.5))
-# dropout:https://blog.csdn.net/program_developer/article/details/80737724
-nmodel.add(Dense(2, activation = 'softmax'))
-nmodel.compile(loss = 'categorical_crossentropy',
-               optimizer = 'adam',
-               metrics = ['accuracy'])
-nmodel.fit(np.array(train_x),np.array(train_y),epochs=10, batch_size=5)
-nmodel.evaluate(np.array(test_x),np.array(test_y), batch_size=5)
+model = Sequential()
+model.add(LSTM(2, input_shape=(train_x.shape[1], train_x.shape[2])))
+model.add(Dropout(dropout))
 
-## 聚类
-from sklearn.cluster import KMeans
-n = 100
-cluster = []
-for i in range(0,n):
-    cluster.append(set())
-for i in range(n):
-    cluster.append(set())
-tokens = []
-for data in datas:
-    for ts in data['tokens']:
-        tokens.append(ts)
-model = Word2Vec(sentences = tokens,min_count = 10)
-vectors = {}
-for v in tqdm(model.wv.vocab.keys()):
-    if v in feature_words and len(v)>2:
-        vectors[v] = model[v]
-labels = KMeans(n_clusters=n, random_state=9).fit_predict([vector for vector in vectors.values()])
+model.add(Activation(activation_function))
+model.compile(loss=loss, optimizer=optimizer, metrics=['mae'])
 
-for i in range(0,len(labels)):
-    cluster[labels[i]].add(list(vectors.keys())[i])
-for c in cluster:
-    if len(c) != 0:
-        print(c)
+model.fit(np.array(train_x),np.array(train_y),epochs=5, batch_size=5)
 
+# # model.evaluate(np.array(test_x),np.array(test_y), batch_size=5)
+predict_y = model.predict(np.array(test_x))
+predict_y = np.argmax(predict_y,axis=1)
+# model.predict(test)预测的是数值,而且输出的还是5个编码值，不过是实数，预测后要经过argmax(predict_test,axis=1)
+
+# company Apple
+appledatas = [data for data in datas if data['company'] =='Apple Inc.']
+apple_count = train_sent_dict(appledatas)
+news2vector(appledatas,apple_count,bl_sent)
+
+apple_X1 = [data['DsVector'] for data in appledatas]
+apple_X2 = [data['SnVector'] for data in appledatas]
+apple_X3 = [data['BlVector'] for data in appledatas]
+apple_X4 = [data['PmiVector'] for data in appledatas]
+# X = [data['ContextVector'] for data in datas]
+apple_X5 = [data['DsVector_rate'] for data in appledatas]
+
+apple_Xs = {'DsVector':apple_X1,'SnVector':apple_X2,'BlVector':apple_X3,'PmiVector':apple_X4,'DsVector_rate':apple_X5}
+
+Y = [np.sign(data['rate']) for data in appledatas]
+
+for vectorname in apple_Xs.keys():
+    print(vectorname+'==============')
+    X = apple_Xs[vectorname]
+    train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+
+    clf = GaussianNB()
+    
+    clf.fit(np.array(train_x), np.array(train_y))
+    predict_y = clf.predict(test_x)
+    recall = recall_score(test_y,clf.predict(test_x),average = 'macro')
+    precision = precision_score(test_y, clf.predict(test_x), average='macro')
+
+    print('recall：',recall)
+    print('precision：',precision)
+    print('f1_score',2*recall*precision/(recall+precision))
+
+    vote_predict_y = vote(predict_y,datas[-len(test_x):])
+    vote_recall = recall_score(test_y,vote_predict_y,average = 'macro')
+    vote_precision = precision_score(test_y, vote_predict_y, average='macro')
+
+    print('voting accuracy：',accuracy(vote_predict_y,test_y))
+    print('voting recall：',vote_recall)
+    print('voting precision：',vote_precision)
+    print('voting f1_score',2*vote_recall*vote_precision/(vote_recall+vote_precision))
+    print('')
+
+# company Apple Randomforest
+
+for vectorname in Xs.keys():
+    print(vectorname+'==============')
+    X = apple_Xs[vectorname]
+    train_x,test_x,train_y,test_y = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+
+    clf = RandomForestClassifier(n_estimators=100, max_depth=2,random_state=0)
+    
+    clf.fit(np.array(train_x), np.array(train_y))
+    predict_y = clf.predict(test_x)
+    recall = recall_score(test_y,clf.predict(test_x),average = 'macro')
+    precision = precision_score(test_y, clf.predict(test_x), average='macro')
+
+    print('recall：',recall)
+    print('precision：',precision)
+    print('f1_score',2*recall*precision/(recall+precision))
+
+    vote_predict_y = vote(predict_y,datas[-len(test_x):])
+    vote_recall = recall_score(test_y,vote_predict_y,average = 'macro')
+    vote_precision = precision_score(test_y, vote_predict_y, average='macro')
+
+    print('voting accuracy：',accuracy(vote_predict_y,test_y))
+    print('voting recall：',vote_recall)
+    print('voting precision：',vote_precision)
+    print('voting f1_score',2*vote_recall*vote_precision/(vote_recall+vote_precision))
+    print('')
+
+# company Apple DNN
+for vectorname in Xs.keys():
+    print(vectorname+'==============')
+    X = apple_Xs[vectorname]
+    train_x,test_x,Y1,Y2 = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+    # train_x = [data['DsVector_rate'] for data in datas]
+    # Y = [np.sign(data['rate']) for data in datas]
+    # test_x = [data['DsVector_rate'] for data in datas2[2000:]]
+    # Y2 = [np.sign(data['rate']) for data in datas2[2000:]]
+
+    train_y = []
+    for y in Y1:
+        if y == 1:
+            train_y.append(np.array([0,1]))
+        else:    
+            train_y.append(np.array([1,0]))
+
+    test_y = []
+    for y in Y2:
+        if y == 1:
+            test_y.append(np.array([0,1]))
+        else:    
+            test_y.append(np.array([1,0]))
+
+    num_classes = 2
+    
+#     train_y = to_categorical(train_y,num_classes=num_classes)
+#     test_y = to_categorical(test_y,num_classes=num_classes)
+    nmodel = Sequential()
+    nmodel.add(Dense(units=num_classes, activation = 'relu', input_dim = np.array(train_x).shape[1]))
+    nmodel.add(Dropout(0.5))
+    nmodel.add(Dense(2, activation = 'relu'))
+    nmodel.add(Dropout(0.5))
+    # dropout:https://blog.csdn.net/program_developer/article/details/80737724
+    nmodel.add(Dense(2, activation = 'softmax'))
+    nmodel.compile(loss = 'categorical_crossentropy',
+                   optimizer = 'adam',
+                   metrics = ['accuracy'])
+    nmodel.fit(np.array(train_x),np.array(train_y),epochs=10, batch_size=5)
+    print(nmodel.evaluate(np.array(test_x),np.array(test_y), batch_size=5))
+
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout
+from keras.utils import to_categorical
+X = [for data in datas]
+Y = [np.sign(data['rate']) for data in datas]
+for vectorname in apple_Xs.keys():
+    print(vectorname+'==============')
+    X = apple_Xs[vectorname]
+    train_x,test_x,Y1,Y2 = model_selection.train_test_split(X,Y,test_size=0.2,shuffle=False)
+    # train_x = [data['DsVector_rate'] for data in datas]
+    # Y = [np.sign(data['rate']) for data in datas]
+    # test_x = [data['DsVector_rate'] for data in datas2[2000:]]
+    # Y2 = [np.sign(data['rate']) for data in datas2[2000:]]
+
+    train_y = []
+    for y in Y1:
+        if y == 1:
+            train_y.append(np.array([0,1]))
+        else:    
+            train_y.append(np.array([1,0]))
+
+    test_y = []
+    for y in Y2:
+        if y == 1:
+            test_y.append(np.array([0,1]))
+        else:    
+            test_y.append(np.array([1,0]))
+
+    num_classes = 2
+    model = Sequential()
+    model.add(LSTM(neurons, return_sequences=True, 
+    input_shape=(inputs.shape[1], inputs.shape[2]), activation=activ_func))
+    model.add(Dropout(dropout))
+    model.add(LSTM(neurons, return_sequences=True, activation=activ_func))
+    model.add(Dropout(dropout))
+    model.add(LSTM(neurons, activation=activ_func))
+    model.add(Dropout(dropout))
+    model.add(Dense(units=output_size))
+    model.add(Activation(activ_func))
+    model.compile(loss=loss, optimizer=optimizer, metrics=['mae'])
+    model.summary()
