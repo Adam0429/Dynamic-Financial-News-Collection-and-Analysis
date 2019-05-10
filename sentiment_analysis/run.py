@@ -68,15 +68,14 @@ def my_read(path):
 def output_cloud(count,name):
     # 云图
     text = '' 
-    for key,value in count.items():
-        text += (key+' ') * (value)
+    for key,value in count.it value)
     wc = WordCloud(
         width=1000,
         height=600,
         max_font_size=100,      #字体大小
         min_font_size=10,
         collocations=False, 
-        max_words=1000
+        max_words=1000 
     )
     wc.generate(text)
     wc.to_file(name+'.png') #图片保存
